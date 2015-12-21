@@ -22,7 +22,7 @@ public class Changsha {
     static final byte TRADE_TYPE_CHARGE = (byte)0x02;
     static final byte TRADE_TYPE_CAPP_PURCHASE = (byte)0x09;
     
-    byte[] random = JCSystem.makeTransientByteArray((short)4, JCSystem.CLEAR_ON_DESELECT);
+    
     short purchaseTradeId = 0;
     short chargeTradeId = 0;
     byte[] money = new byte[4];
@@ -60,17 +60,17 @@ public class Changsha {
     
    
     
-    //0debug 
-//1release
-    private short mode = (short)0;
-    private static final short MODE_DEBUG = 0x00;
-    private static final short MODE_RELEASE = 0X01;
+   
     
     COS cos;
+    MyRandom myRandom;
+    byte[] random;
     
-    public Changsha(COS c)
+    
+    public Changsha(COS c, MyRandom rand)
     {
         cos = c;
+        myRandom = rand;
     }
     
     //gen random
@@ -79,26 +79,15 @@ public class Changsha {
         byte[] buffer = apdu.getBuffer();
         
         
-        genRandom();
+        myRandom.genRandom();
+        random = myRandom.getRandom();
         
         Util.arrayCopyNonAtomic(random, (short)0, buffer, (short)0, (short)4);
         
         apdu.le = 4;
     }
     
-    public void genRandom()
-    {
-        RandomData ICC = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM);
-        ICC.setSeed(random, (short)0, (short)4);
-        ICC.generateData(random, (short)0, (short)4);
-        
-        if (mode == MODE_DEBUG)
-        {
-            byte[] test = {0x41, 0x42, 0x43, 0x44};
-            
-            Util.arrayCopyNonAtomic(test, (short)0, random, (short)0, (short)4);
-        }
-    }
+    
     
    
     public void externalAuth(MyAPDU apdu) throws ISOException
@@ -116,6 +105,8 @@ public class Changsha {
         byte[] key = {(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF};
         
         byte[] in = new byte[8];
+        //myRandom.genRandom();
+        random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, in, (short)0, (short)4);
         in[4] = (byte)0x00;
         in[5] = (byte)0x00;
@@ -170,6 +161,8 @@ public class Changsha {
 
         
         //gen charge session key
+        myRandom.genRandom();
+        random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
         Util.setShort(temp, (short)4, chargeTradeId);
         byte[] chargeKey = key.getKey();
@@ -192,7 +185,7 @@ public class Changsha {
         Util.setShort(buffer, (short)4, chargeTradeId);
         buffer[6] = key.getKeyVersion();
         buffer[7] = key.getAlgId();
-        Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
+        Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4); // random
         Util.arrayCopy(MAC1, (short)0, buffer, (short)12, (short)4);
         apdu.le = 16;
     }
@@ -313,6 +306,8 @@ public class Changsha {
         Util.setShort(buffer, (short)4, purchaseTradeId);
         buffer[6] = key.getKeyVersion();
         buffer[7] = key.getAlgId();
+        myRandom.genRandom();
+        random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
         apdu.le = 12;
     }
@@ -466,6 +461,8 @@ public class Changsha {
         buffer[7] = key.getAlgId();
         
         // set random
+        myRandom.genRandom();
+        random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
 
         apdu.le = 12;
@@ -623,4 +620,6 @@ public class Changsha {
         // buffer = 80 5A A1/A2 00 02 Data
         // response buffer = MAC/TAC
     }
+    
+   
 }

@@ -10,13 +10,13 @@ package com.cssweb.applet.changsha;
  * @author chenh
  */
 public class INS {
-    public static final byte CLA = (byte)0x80;
+  
     
     
     public static final byte CREATE = (byte)0xE0;
     public static final byte SELECT = (byte)0xA4;
     
-    public static final byte ERASE_DF = (byte)0x0E; //not implement
+
     public static final byte WRITE_KEY = (byte)0xD4; //not implement
     
     public static final byte READ_BINARY = (byte)0xB0;
@@ -26,10 +26,14 @@ public class INS {
     public static final byte WRITE_RECORD = (byte)0xDC;
     public static final byte APPEND_RECORD = (byte)0xE2;
     
-    public static final byte WRITE_UID = (byte)0x22; // user define
+    //hua da 
+    public static final byte WRITE_UID = (byte)0x22; 
     public static final byte GET_MESSAGE= (byte)0xCA; //get security auth code
     
     public static final byte GET_CHALLENGE = (byte)0x84; //random
+    public static final byte INTERNAL_AUTH = (byte)0x88;
+    public static final byte EXTERNAL_AUTH = (byte)0x82;
+    
     public static final byte GET_BALANCE = (byte)0x5C;
     public static final byte INIT_PURCHASE_CHARGE = (byte)0x50;
     public static final byte PURCHASE = (byte)0x30;
@@ -38,8 +42,7 @@ public class INS {
     public static final  byte UPDATE_CAPP_PURCHASE = (byte)0xDC;
     public static final  byte CAPP_PURCHASE = (byte)0x54;
     
-    public static final byte INTERNAL_AUTH = (byte)0x88;
-    public static final byte EXTERNAL_AUTH = (byte)0x82;
+
     
  
     public static final byte APP_BLOCK = (byte)0x1E;

@@ -6,6 +6,7 @@
 package com.cssweb.applet.changsha;
 
 import javacard.framework.JCSystem;
+import javacard.framework.Util;
 
 /**
  *
@@ -18,12 +19,22 @@ public class MyAPDU {
      // only data
     public   byte[]  buffer;
     
-    public   byte[]  ucTemp256; //CLA=0x04 or 0x84
+    public   byte[]  allBuffer; //CLA=0x04 or 0x84
+    
+    private COS cos;
+    
+    private MyRandom myRandom;
+    private byte[] random;
+    
+    
    
-    public  MyAPDU() 
+    public  MyAPDU(COS c, MyRandom rand) 
     {
        buffer = JCSystem.makeTransientByteArray((short)512, JCSystem.CLEAR_ON_DESELECT);
-       ucTemp256 = JCSystem.makeTransientByteArray((short)256, JCSystem.CLEAR_ON_DESELECT);
+       allBuffer = JCSystem.makeTransientByteArray((short)516, JCSystem.CLEAR_ON_DESELECT);
+       
+       cos = c;
+       myRandom = rand;
     } 
     
     public byte[] getBuffer()
@@ -58,6 +69,61 @@ public class MyAPDU {
         }
         
         return false;
+    }
+    
+    public boolean unwrap(byte keyId)
+    {
+    	boolean ret = false;
+    	
+    	KEY key = cos.loadKey(keyId);
+    	if (key == null)
+    	{
+    		
+    		//ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+    		ret = false;
+    		return ret;
+    	}
+    	byte[] k = key.getKey();
+    		
+    	
+    	byte[] iv = new byte[8];
+    	random = myRandom.getRandom();
+    	Util.arrayCopyNonAtomic(random, (short)0, iv, (short)0, (short)4);
+    	iv[4] = (byte)0x00;
+    	iv[5] = (byte)0x00;
+    	iv[6] = (byte)0x00;
+    	iv[7] = (byte)0x00;
+    	
+    	
+    	allBuffer[0] = cla;
+    	allBuffer[1] = ins;
+    	allBuffer[2] = p1;
+    	allBuffer[3] = p2;
+    	allBuffer[4] = (byte)lc;
+    	short len = (short) (lc - 4);
+    	Util.arrayCopyNonAtomic(buffer, (short)0, allBuffer, (short)5, len);
+    	
+    	
+    	
+    	byte[] mac = new byte[8];
+    	
+    	ALG.genMACOrTAC(k, iv, allBuffer, (short)(5+len), mac);
+    	
+    	byte[] MAC = new byte[4];
+    	Util.arrayCopyNonAtomic(buffer, len, MAC, (short)0, (short)4);
+    	
+    	if (Util.arrayCompare(MAC, (short)0, mac, (short)0, (short) 4) == 0)
+    	{
+    		ret = true;
+    		
+    		// 这里非常重要，重置大小，去掉后面MAC
+    		lc = len;
+    	}
+    	
+
+    	
+    	return ret;
+    	
     }
     
 }

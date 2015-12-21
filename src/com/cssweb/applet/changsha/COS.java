@@ -26,6 +26,9 @@ public class COS {
     byte[] UID;
     boolean personalEnd;
     
+    byte keyId = (byte)0x10;
+    
+    
     public COS()
     {
         
@@ -322,6 +325,12 @@ public class COS {
         //sfi
         //XXXX X000 //tag
         //XXXX X100 //id
+        
+        if (apdu.cla == (byte)0x04)
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
        
         
         byte t = (byte)(apdu.p2 << 5);
@@ -340,7 +349,10 @@ public class COS {
          
         byte sfi = (byte)((apdu.p2 & 0xF8) >> 3);
         
+        
+        
         byte[] record = new byte[apdu.lc];
+        
         Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, apdu.lc);
         
         if (sfi == (byte)0x00)

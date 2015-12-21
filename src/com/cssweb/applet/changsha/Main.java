@@ -24,6 +24,7 @@ public class Main extends Applet {
     MyAPDU  apduin;
     COS cos;
     Changsha changsha;
+    MyRandom random;
     
     
     
@@ -37,9 +38,12 @@ public class Main extends Applet {
 
    
     protected Main(byte[] bArray, short bOffset, byte bLength) {
-        apduin = new MyAPDU();
+       
+    	random = new MyRandom();
+    	
         cos = new COS();
-        changsha = new Changsha(cos);
+        changsha = new Changsha(cos, random);
+        apduin = new MyAPDU(cos, random);
         
        
        
@@ -121,6 +125,7 @@ public class Main extends Applet {
                 cos.createFile(apduin);
                 break;
                 
+                
             case INS.SELECT:
                 cos.selectFile(apduin);
                 break;
@@ -136,19 +141,31 @@ public class Main extends Applet {
             case INS.APPEND_RECORD:
                 cos.appendRecord(apduin);
                 break;
+            case INS.WRITE_KEY:
+                cos.writeKey(apduin);
+                break;
+            case INS.PERSONAL_END:
+                cos.personalEnd(apduin);
+                break;
+                
+                
             case INS.GET_CHALLENGE:
                 changsha.challenge(apduin);
                 break;
             case INS.EXTERNAL_AUTH:
                 changsha.externalAuth(apduin);
-                break;                
+                break;      
+                
+                
             case INS.WRITE_UID:
                 cos.writeUID(apduin);
                 break;
             case INS.GET_MESSAGE:
                 cos.getMessage(apduin);
                 break;
-	    case INS.GET_BALANCE:
+                
+                
+            case INS.GET_BALANCE:
                 changsha.getBalance(apduin);
                 break;
             case INS.INIT_PURCHASE_CHARGE:
@@ -161,12 +178,13 @@ public class Main extends Applet {
                     changsha.cappPurchaseInit(apduin);
                 break;
             }
-            case INS.PURCHASE:
-                changsha.purchase(apduin);
-                break;
             case INS.CHARGE:
                 changsha.charge(apduin);
                 break;
+            case INS.PURCHASE:
+                changsha.purchase(apduin);
+                break;
+
             case (byte)0xDC:
                 if (apduin.cla == (byte)0x00)
                     cos.updateRecord(apduin);
@@ -177,18 +195,18 @@ public class Main extends Applet {
                 changsha.cappPurchase(apduin);
                 break;
 
-            case INS.WRITE_KEY:
-                cos.writeKey(apduin);
-                break;
+            
             case INS.APP_BLOCK:
                 cos.appBlock(apduin);
                 break;
             case INS.APP_UNBLOCK:
                 cos.appUnBlock(apduin);
                 break;
-            case INS.PERSONAL_END:
-                cos.personalEnd(apduin);
-                break;
+            case INS.CARD_BLOCK:
+            	cos.cardBlock(apduin);
+            	break;
+                
+           
                 
             case INS.DES_TEST:
                 ALG.testDES(apduin);
