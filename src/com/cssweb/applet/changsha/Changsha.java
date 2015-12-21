@@ -34,6 +34,7 @@ public class Changsha {
     byte[] MAC2 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     byte[] TAC = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     byte[] MAC1 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    byte[] iv = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
         
    
     
@@ -222,7 +223,7 @@ public class Changsha {
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
         
-        ALG.genMACOrTAC(purchaseSessionKey, temp, (byte)18, MAC1);
+        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)18, MAC1);
         
         if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
         {
@@ -252,13 +253,13 @@ public class Changsha {
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
         byte[] tacKey = ALG.bytesXOR(left, right);
         
-        ALG.genMACOrTAC(tacKey, temp, (byte)22, TAC);
+        ALG.genMACOrTAC(tacKey, iv, temp, (byte)22, TAC);
         //end
         
         
         
         //gen MAC2
-        ALG.genMACOrTAC(purchaseSessionKey, money, (byte)4, MAC2);
+        ALG.genMACOrTAC(purchaseSessionKey, iv, money, (byte)4, MAC2);
         //end
         
         
@@ -395,7 +396,7 @@ public class Changsha {
         temp[4] = TRADE_TYPE_CAPP_PURCHASE;
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(terminalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
-        ALG.genMACOrTAC(purchaseSessionKey, temp, (byte)18, MAC1);
+        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)18, MAC1);
         
         if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
         {
@@ -422,13 +423,13 @@ public class Changsha {
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
         byte[] tacKey = ALG.bytesXOR(left, right);
         
-        ALG.genMACOrTAC(tacKey, temp, (byte)22, TAC);
+        ALG.genMACOrTAC(tacKey, iv, temp, (byte)22, TAC);
         //end
         
         //gen MAC2
         // begin money is 0
         // end money is actual money
-        ALG.genMACOrTAC(purchaseSessionKey, money, (byte)4, MAC2);
+        ALG.genMACOrTAC(purchaseSessionKey, iv, money, (byte)4, MAC2);
         //end
         
         
@@ -517,7 +518,7 @@ public class Changsha {
         Util.arrayCopy(money, (short)0, temp, (short)4, (short)4);
         temp[8] = TRADE_TYPE_CHARGE;
         Util.arrayCopy(terminalId, (short)0, temp, (short)9, (short)6);
-        ALG.genMACOrTAC(chargeSessionKey, temp, (byte)15, MAC1);
+        ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)15, MAC1);
         
         
         
@@ -549,7 +550,7 @@ public class Changsha {
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)11, (short)7);
         
-        ALG.genMACOrTAC(chargeSessionKey, temp, (byte)18, MAC2);
+        ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)18, MAC2);
         
         if (Util.arrayCompare(MAC2, (short)0, mac2, (short)0, (short)4) != 0)
         {
@@ -600,7 +601,9 @@ public class Changsha {
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
         byte[] tacKey = ALG.bytesXOR(left, right);
         
-        ALG.genMACOrTAC(tacKey, temp, (byte)24, TAC);
+        
+        
+        ALG.genMACOrTAC(tacKey, iv, temp, (byte)24, TAC);
         
         
         Util.arrayCopy(TAC, (short)0, buffer, (short)0, (short)4);

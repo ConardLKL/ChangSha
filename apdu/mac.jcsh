@@ -1,0 +1,11 @@
+/send 00a4040009a00000000386980700
+
+#test des
+/send 800000000008
+
+
+#test mac1
+/send 80010000007f
+
+# test tac
+/send 80020000007f

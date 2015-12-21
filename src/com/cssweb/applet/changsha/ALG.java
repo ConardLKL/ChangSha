@@ -42,96 +42,7 @@ public class ALG {
     private static byte byteXOR(byte src1, byte src2) {
         return (byte) ((src1 & 0xFF) ^ (src2 & 0xFF));
     }
-    
-   
-    public static void genSessionKey(byte[] key, byte[] src, short srcLen, byte[] sessionKey)
-    {
-        //padding data
-        byte[] data = padding(src, srcLen);
-        short len = (short) data.length;
-         
-        DESKey dk;
-        if (key.length == 8)
-        {
-            dk = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES, false);
-        }
-        else  
-        {
-            dk = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES3_2KEY, false);
-        }
-         
-        dk.setKey(key, (short)0);
-        
-        //Cipher cipher = Cipher.getInstance(Cipher.ALG_DES_ECB_NOPAD, false);
-        Cipher cipher = Cipher.getInstance(Cipher.ALG_DES_CBC_ISO9797_M2, false);
-        
-      
-        
-        
-        cipher.init(dk, Cipher.MODE_ENCRYPT);
-       
-        cipher.doFinal(data, (short)0, (short)8, sessionKey, (short)0);
-    }
-    
-    public static void genMACOrTAC(byte[] sessionKey, byte[] src, short srcLen, byte[] dest)
-    {
-        //padding data
-        byte[] data = padding(src, srcLen);
-        short len = (short) data.length;
-        
-        
-        //DESKey dk = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_DES, false);
-        DESKey dk = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES, false);
-        dk.setKey(sessionKey, (short)0);
-        
-        Signature sig = Signature.getInstance(Signature.ALG_DES_MAC8_ISO9797_M2, false);
-        sig.init(dk, Signature.MODE_SIGN);
-        sig.sign(data, (short)0, len, dest, (short)0);
-    }
-    
-    public static void genMACOrTAC(byte[] key, byte[] iv, byte[] src, short srcLen, byte[] mac)
-    {
-        byte[] left = new byte[8];
-        byte[] right = new byte[8];
-        Util.arrayCopy(key, (short)0, left, (short)0, (short)8);
-        Util.arrayCopy(key, (short)8, right, (short)0, (short)8);
-        
-        //padding data
-        byte[] data = padding(src, srcLen);
-        short len = (short) data.length;
-        
-        short pos = 0;
-        byte[] block1 = new byte[8];
-        Util.arrayCopy(data, pos, block1, (short)0, (short)8);
-        pos += 8;
 
-        byte[] input = bytesXOR(iv, block1);
-
-        byte[] output = new byte[16];
-        encrypt(left, input, (short)0, (short)8, output, (short)0);
-        
-        
-        short count = (short)(data.length/8);
-        for (short i=1; i<count; i++)
-        {
-            byte[] block = new byte[8];
-            Util.arrayCopy(data, pos, block, (short)0, (short)8);
-            pos += 8;
-
-            // 存放异或结果
-            input = bytesXOR(output, block);
-
-            encrypt(left, input, (short)0, (short)8, output, (short)0);
-        }
-
-        byte[] dec = new byte[8];
-        decrypt(right, output, (short)0, (short)16, dec, (short)0);
-        
-        
-        
-        encrypt(left, dec, (short)0, (short)8, mac, (short)0);
-    }
-    
     public static  byte[] padding(byte[] src, short srcLen)
     {
         short x = (short)(srcLen % 8);
@@ -160,30 +71,82 @@ public class ALG {
         
         return data;
     }
+   
+    public static void genSessionKey(byte[] key, byte[] src, short srcLen, byte[] sessionKey)
+    {
+        //padding data
+        byte[] data = padding(src, srcLen);
+        short len = (short) data.length;
+         
+        DESKey dk;
+        if (key.length == 8)
+        {
+            dk = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES, false);
+        }
+        else  
+        {
+            dk = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES3_2KEY, false);
+        }
+         
+        dk.setKey(key, (short)0);
+        
+        Cipher cipher = Cipher.getInstance(Cipher.ALG_DES_ECB_NOPAD, false);
+        
+        
+        cipher.init(dk, Cipher.MODE_ENCRYPT);
+       
+        cipher.doFinal(data, (short)0, (short)8, sessionKey, (short)0);
+    }
+    
+    
+    
+    public static void genMACOrTAC(byte[] key, byte[] iv, byte[] src, short srcLen, byte[] mac)
+    {
+        byte[] left = new byte[8];
+        byte[] right = new byte[8];
+        Util.arrayCopy(key, (short)0, left, (short)0, (short)8);
+        Util.arrayCopy(key, (short)8, right, (short)0, (short)8);
+        
+        //padding data
+        byte[] data = padding(src, srcLen);
+        short len = (short) data.length;
+        
+        short pos = 0;
+        byte[] block1 = new byte[8];
+        Util.arrayCopy(data, pos, block1, (short)0, (short)8);
+        pos += 8;
+
+        byte[] input = bytesXOR(iv, block1);
+
+        byte[] output = new byte[8];
+        encrypt(left, input, (short)0, (short)8, output, (short)0);
+        
+        
+        short count = (short)(data.length/8);
+        for (short i=1; i<count; i++)
+        {
+            byte[] block = new byte[8];
+            Util.arrayCopy(data, pos, block, (short)0, (short)8);
+            pos += 8;
+
+            // 存放异或结果
+            input = bytesXOR(output, block);
+
+            encrypt(left, input, (short)0, (short)8, output, (short)0);
+        }
+
+        byte[] dec = new byte[8];
+        decrypt(right, output, (short)0, (short)8, dec, (short)0);
+        
+        
+        
+        encrypt(left, dec, (short)0, (short)8, mac, (short)0);
+    }
+    
     
     public static void encrypt(byte[] key, byte[] src, short srcOffset, short srcLen, byte[] out, short outOffset)
     {
-    	 /*
-        boolean supported;
-       
-        try {
-              //  Cipher m_cipher = Cipher.getInstance(Cipher.ALG_DES_ECB_NOPAD, false);
-            //Cipher m_cipher = Cipher.getInstance(Cipher.ALG_DES_CBC_ISO9797_M2, false);
-                
-                supported = true;
-            }
-            catch (CryptoException e) {
-                
-                    if (e.getReason() == CryptoException.NO_SUCH_ALGORITHM) {
-                        // algorithm is not supported
-                        supported = false;
-                    }
-                    else {
-                        // other error occured
-                    }
-            }
-        
-        */
+    
         
         Cipher cipher = Cipher.getInstance(Cipher.ALG_DES_ECB_NOPAD, false);
          
@@ -277,7 +240,7 @@ public class ALG {
         Util.arrayCopy(key, (short)8, right, (short)0, (short)8);
         byte[] sessionKey = ALG.bytesXOR(left, right);
         
-        ALG.genMACOrTAC(sessionKey, data, (short)data.length, mac1);
+        ALG.genMACOrTAC(sessionKey, iv, data, (short)data.length, mac1);
      
        
         Util.arrayCopy(mac1, (short)0, buffer, (short)0, (short)8);
