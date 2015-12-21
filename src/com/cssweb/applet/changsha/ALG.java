@@ -95,7 +95,7 @@ public class ALG {
         
         cipher.init(dk, Cipher.MODE_ENCRYPT);
        
-        cipher.doFinal(data, (short)0, (short)8, sessionKey, (short)0);
+        cipher.doFinal(data, (short)0, (short)len, sessionKey, (short)0);
     }
     
     
@@ -105,7 +105,9 @@ public class ALG {
         byte[] left = new byte[8];
         byte[] right = new byte[8];
         Util.arrayCopy(key, (short)0, left, (short)0, (short)8);
-        Util.arrayCopy(key, (short)8, right, (short)0, (short)8);
+        
+        if(key.length == 16)
+        	Util.arrayCopy(key, (short)8, right, (short)0, (short)8);
         
         //padding data
         byte[] data = padding(src, srcLen);
@@ -135,12 +137,17 @@ public class ALG {
             encrypt(left, input, (short)0, (short)8, output, (short)0);
         }
 
-        byte[] dec = new byte[8];
-        decrypt(right, output, (short)0, (short)8, dec, (short)0);
-        
-        
-        
-        encrypt(left, dec, (short)0, (short)8, mac, (short)0);
+        if (key.length == 16)
+        {
+        	byte[] dec = new byte[8];
+        	decrypt(right, output, (short)0, (short)8, dec, (short)0);
+        	
+        	encrypt(left, dec, (short)0, (short)8, mac, (short)0);
+        }
+        else
+        {
+        	Util.arrayCopy(output, (short)0, mac, (short)0, (short)8);
+        }
     }
     
     

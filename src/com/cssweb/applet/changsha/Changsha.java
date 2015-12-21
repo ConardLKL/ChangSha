@@ -50,7 +50,7 @@ public class Changsha {
     //byte[] sessionKey = JCSystem.makeTransientByteArray((short)16, JCSystem.CLEAR_ON_DESELECT);
     //byte[] sessionKey = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     byte[] purchaseSessionKey = new byte[16];
-    byte[] chargeSessionKey = new byte[16];
+    byte[] chargeSessionKey = new byte[8];
     
     //JCint balanace;
     EP balance = new EP((byte)0x00, (byte)0x00, (byte)0xf0, (byte)0xf0);
@@ -117,9 +117,13 @@ public class Changsha {
         
         byte[] in = new byte[8];
         Util.arrayCopy(random, (short)0, in, (short)0, (short)4);
+        in[4] = (byte)0x00;
+        in[5] = (byte)0x00;
+        in[6] = (byte)0x00;
+        in[7] = (byte)0x00;
         
-        byte[] out = new byte[16];
-//        ALG.encrypt(key, in, (short)8, out);
+        byte[] out = new byte[8];
+        ALG.encrypt(key, in, (short)0, (short)8, out, (short)0);
         
        
         
@@ -145,6 +149,131 @@ public class Changsha {
         return true;
     }
     
+
+    public void chargeInit(MyAPDU apdu) throws ISOException
+    {
+        byte[] buffer = apdu.getBuffer();
+        // buffer = CLA INS P1 P2 LC keyIndex1 money4 terminalId6
+
+        // get key index
+        byte keyId = buffer[0];
+        KEY key = cos.loadKey(keyId);
+        if (key == null)
+        {
+            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+        }
+        // get purchase money
+        Util.arrayCopy(buffer, (short)1, money, (short)0, (short)4); 
+        // get terminal id
+        Util.arrayCopy(buffer, (short)5, terminalId, (short)0, (short)6);
+        //end
+
+        
+        //gen charge session key
+        Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
+        Util.setShort(temp, (short)4, chargeTradeId);
+        byte[] chargeKey = key.getKey();
+        ALG.genSessionKey(chargeKey, temp, (short)6, chargeSessionKey);
+        
+        
+        // gen MAC1
+        // balance4 money4 tradeType1 ternimalId6
+        byte[] baBalance = balance.toBytes();
+        Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
+        Util.arrayCopy(money, (short)0, temp, (short)4, (short)4);
+        temp[8] = TRADE_TYPE_CHARGE;
+        Util.arrayCopy(terminalId, (short)0, temp, (short)9, (short)6);
+        ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)15, MAC1);
+        
+        
+        
+        // response buffer = balance4, chargeTradeId2 keyVersion1 AlgId1 random4 MAC(1)4
+        Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
+        Util.setShort(buffer, (short)4, chargeTradeId);
+        buffer[6] = key.getKeyVersion();
+        buffer[7] = key.getAlgId();
+        Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
+        Util.arrayCopy(MAC1, (short)0, buffer, (short)12, (short)4);
+        apdu.le = 16;
+    }
+   
+    public void charge(MyAPDU apdu) throws ISOException
+    {
+        byte[] buffer = apdu.getBuffer();
+        
+        // buffer = CLA INS P1 P2 LC ternimalDate4 ternimalTime3 MAC(2)4
+        byte[] ternimalDatetime = new byte[7];
+        Util.arrayCopy(buffer, (short)0, ternimalDatetime, (short)0, (short)7);
+        byte[] mac2 = new byte[4];
+        Util.arrayCopy(buffer, (short)7, mac2, (short)0, (short)4);
+        
+        
+        
+        // GET MAC2 = money4 tradeType1 ternimalId6 terminalDatetime7
+        Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
+        temp[4] = TRADE_TYPE_CHARGE;
+        Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
+        Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)11, (short)7);
+        
+        ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)18, MAC2);
+        
+        if (Util.arrayCompare(MAC2, (short)0, mac2, (short)0, (short)4) != 0)
+        {
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+        }
+        
+        
+        JCSystem.beginTransaction();
+        balance.add(money, (byte)1);
+        chargeTradeId++;
+        
+        byte[] log = new byte[23];
+        Util.setShort(log, (short)0, chargeTradeId);
+        Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
+        log[9] = TRADE_TYPE_CHARGE;
+        Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
+        Util.arrayCopy(ternimalDatetime, (short)0, log, (short)16, (short)7);
+        
+        if (!cos.appendLog((short)0x1A, log))
+            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+                
+        JCSystem.commitTransaction();
+        
+        
+        
+        // response buffer = TAC4
+        // balance4 chargeTradeId2 money4 tradeType1 ternimalId6 terminalDatetime7
+        byte[] baBalance = balance.toBytes();
+        Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
+        Util.setShort(temp, (short)4, chargeTradeId);
+        Util.arrayCopy(money, (short)0, temp, (short)6, (short)4);
+        temp[10] = TRADE_TYPE_CHARGE;
+        Util.arrayCopy(terminalId, (short)0, temp, (short)11, (short)6);
+        Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)17, (short)7);
+        
+        byte[] left = new byte[8];
+        byte[] right = new byte[8];
+        
+        
+        KEY key = cos.loadKey((byte)0x60);
+        if (key == null)
+        {
+            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+        }
+        byte[] TACKey = key.getKey();
+        
+        Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
+        Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
+        byte[] tacKey = ALG.bytesXOR(left, right);
+        
+        
+        
+        ALG.genMACOrTAC(tacKey, iv, temp, (byte)24, TAC);
+        
+        
+        Util.arrayCopy(TAC, (short)0, buffer, (short)0, (short)4);
+        apdu.le = 4;   
+    }
     
     public void purchaseInit(MyAPDU apdu) throws ISOException
     {
@@ -211,6 +340,7 @@ public class Changsha {
         Util.setShort(temp, (short)4, purchaseTradeId);
         // ternimalTradeId right 2byte???
         Util.arrayCopy(ternimalTradeId, (short)2, temp, (short)6, (short)2); 
+        
         ALG.genSessionKey(purchaseKey, temp, (short)8, purchaseSessionKey);//return 32 bytes
         // end
         
@@ -385,6 +515,7 @@ public class Changsha {
         Util.setShort(temp, (short)4, purchaseTradeId);
         // ternimalTradeId right 2byte???
         Util.arrayCopy(ternimalTradeId, (short)2, temp, (short)6, (short)2); 
+        
         ALG.genSessionKey(purchaseKey, temp, (short)8, purchaseSessionKey);
         // end
         
@@ -396,8 +527,8 @@ public class Changsha {
         temp[4] = TRADE_TYPE_CAPP_PURCHASE;
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(terminalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
-        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)18, MAC1);
         
+        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)18, MAC1);
         if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
         {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
@@ -485,131 +616,6 @@ public class Changsha {
     }
     
     
-    public void chargeInit(MyAPDU apdu) throws ISOException
-    {
-        byte[] buffer = apdu.getBuffer();
-        // buffer = CLA INS P1 P2 LC keyIndex1 money4 terminalId6
-
-        // get key index
-        byte keyId = buffer[0];
-        KEY key = cos.loadKey(keyId);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        // get purchase money
-        Util.arrayCopy(buffer, (short)1, money, (short)0, (short)4); 
-        // get terminal id
-        Util.arrayCopy(buffer, (short)5, terminalId, (short)0, (short)6);
-        //end
-
-        
-        //gen charge session key
-        Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
-        Util.setShort(temp, (short)4, chargeTradeId);
-        byte[] chargeKey = key.getKey();
-        ALG.genSessionKey(chargeKey, temp, (short)6, chargeSessionKey);
-        
-        
-        // gen MAC1
-        // balance4 money4 tradeType1 ternimalId6
-        byte[] baBalance = balance.toBytes();
-        Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
-        Util.arrayCopy(money, (short)0, temp, (short)4, (short)4);
-        temp[8] = TRADE_TYPE_CHARGE;
-        Util.arrayCopy(terminalId, (short)0, temp, (short)9, (short)6);
-        ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)15, MAC1);
-        
-        
-        
-        // response buffer = balance4, chargeTradeId2 keyVersion1 AlgId1 random4 MAC(1)4
-        Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
-        Util.setShort(buffer, (short)4, chargeTradeId);
-        buffer[6] = key.getKeyVersion();
-        buffer[7] = key.getAlgId();
-        Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
-        Util.arrayCopy(MAC1, (short)0, buffer, (short)12, (short)4);
-        apdu.le = 16;
-    }
-   
-    public void charge(MyAPDU apdu) throws ISOException
-    {
-        byte[] buffer = apdu.getBuffer();
-        
-        // buffer = CLA INS P1 P2 LC ternimalDate4 ternimalTime3 MAC(2)4
-        byte[] ternimalDatetime = new byte[7];
-        Util.arrayCopy(buffer, (short)0, ternimalDatetime, (short)0, (short)7);
-        byte[] mac2 = new byte[4];
-        Util.arrayCopy(buffer, (short)7, mac2, (short)0, (short)4);
-        
-        
-        
-        // GET MAC2 = money4 tradeType1 ternimalId6 terminalDatetime7
-        Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
-        temp[4] = TRADE_TYPE_CHARGE;
-        Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
-        Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)11, (short)7);
-        
-        ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)18, MAC2);
-        
-        if (Util.arrayCompare(MAC2, (short)0, mac2, (short)0, (short)4) != 0)
-        {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
-        }
-        
-        
-        JCSystem.beginTransaction();
-        balance.add(money, (byte)1);
-        chargeTradeId++;
-        
-        byte[] log = new byte[23];
-        Util.setShort(log, (short)0, chargeTradeId);
-        Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
-        log[9] = TRADE_TYPE_CHARGE;
-        Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
-        Util.arrayCopy(ternimalDatetime, (short)0, log, (short)16, (short)7);
-        
-        if (!cos.appendLog((short)0x1A, log))
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
-                
-        JCSystem.commitTransaction();
-        
-        
-        
-        // response buffer = TAC4
-        // balance4 chargeTradeId2 money4 tradeType1 ternimalId6 terminalDatetime7
-        byte[] baBalance = balance.toBytes();
-        Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
-        Util.setShort(temp, (short)4, chargeTradeId);
-        Util.arrayCopy(money, (short)0, temp, (short)6, (short)4);
-        temp[10] = TRADE_TYPE_CHARGE;
-        Util.arrayCopy(terminalId, (short)0, temp, (short)11, (short)6);
-        Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)17, (short)7);
-        
-        byte[] left = new byte[8];
-        byte[] right = new byte[8];
-        
-        
-        KEY key = cos.loadKey((byte)0x60);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        byte[] TACKey = key.getKey();
-        
-        Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
-        Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
-        byte[] tacKey = ALG.bytesXOR(left, right);
-        
-        
-        
-        ALG.genMACOrTAC(tacKey, iv, temp, (byte)24, TAC);
-        
-        
-        Util.arrayCopy(TAC, (short)0, buffer, (short)0, (short)4);
-        apdu.le = 4;
-       
-    }
     
     public void TranProof(MyAPDU apdu)
     {

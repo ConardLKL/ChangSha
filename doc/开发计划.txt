@@ -1,15 +1,2 @@
-线路保护功能unwrap
 write key 84D4
 write file 04D6 
-
-存在的问题
-1.安装applet， 选择default， 提示安装失败，不选择default是可以正确安装的。
-2.加密模式选择ecb报错的问题
-
-
-
-http://blog.csdn.net/wcg_jishuo/article/details/6624299
-http://blog.csdn.net/zuokong/article/details/49334851
-http://blog.csdn.net/zuokong/article/details/49335257
-
-
