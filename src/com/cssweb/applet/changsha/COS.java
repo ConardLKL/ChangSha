@@ -200,7 +200,11 @@ public class COS {
         byte sfi = (byte) (apdu.p1 & 0x7F);
         
        
-       
+        if (apdu.cla == (byte)0x04)
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
         
         
         BinaryFile file = (BinaryFile) currentDF.selectFile(sfi);
@@ -219,7 +223,12 @@ public class COS {
     
     public void readBinary(MyAPDU apdu) throws ISOException
     {
-
+    	if (apdu.cla == (byte)0x04)
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+    	
          //0x7F=0111 1111
         //100X XXXX
         byte sfi = (byte) (apdu.p1 & (byte)0x7F);
@@ -253,6 +262,12 @@ public class COS {
         //sfi
         //XXXX X000 //tag
         //XXXX X100 //id
+        
+        if (apdu.cla == (byte)0x04)
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
        
         
         byte t = (byte)(apdu.p2 << 5);
@@ -391,6 +406,11 @@ public class COS {
         byte recordId = 0;
         byte tag = 0;
         
+        if (apdu.cla == (byte)0x04)
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
        
         
         //sfi
@@ -499,17 +519,44 @@ public class COS {
         
     }
     
-    public void cardBlock(MyAPDU apdu)
+    public void cardBlock(MyAPDU apdu) throws ISOException
     {
+        if (apdu.cla != (byte)0x84)
+        {
+        	ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
+        else
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
         
+        if (apdu.ins != (byte)0x16)
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        
+        if (apdu.p1 != (byte)0x00)
+        	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        
+        if (apdu.p2 != (byte)0x00)
+        	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
     }
     
-    public void appBlock(MyAPDU apdu)
+    public void appBlock(MyAPDU apdu) throws ISOException
     {
-        if (apdu.cla != (byte)0x84 && apdu.ins != (byte)0x1E)
+        if (apdu.cla != (byte)0x84)
+        {
             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
+        else
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
         
-        //unwrap 
+        if (apdu.ins != (byte)0x1E)
+        {
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
         
         if (apdu.p2 == (byte)0x00)
             appLock = true;
@@ -521,22 +568,34 @@ public class COS {
         apdu.le = 0;
     }
     
-    public void appUnBlock(MyAPDU apdu)
+    public void appUnBlock(MyAPDU apdu) throws ISOException
     {
-        if (apdu.cla != (byte)0x84 && apdu.ins != (byte)0x18)
+        if (apdu.cla != (byte)0x84)
+        {
             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
+        else
+        {
+        	if (!apdu.unwrap(keyId))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+        
+        if (apdu.ins != (byte)0x18)
+        {
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
         
         if(appLockForEver)
         	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         
-        //unwrap
         
-         if(appLock)
+        
+        if(appLock)
              appLock = false;
         else 
              ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         
-        apdu.le = (short)0x0;
+        apdu.le = (short)0;
     }
     
     
