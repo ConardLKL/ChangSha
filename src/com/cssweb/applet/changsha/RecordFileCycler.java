@@ -37,7 +37,7 @@ public class RecordFileCycler extends RecordFile{
     {
         if (recordId > maxRecordNum)
         {
-            recordId = 0;
+            recordId = 1;
         }
        
         records[recordId++] = rec;

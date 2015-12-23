@@ -22,7 +22,7 @@ public class RecordFile extends File{
         super(SFI, len, read, write);
         
         
-        recordId = 0;
+        recordId = 1;
         maxRecordNum = MAX_RECORD_NUM;
         records = new Object[maxRecordNum];
     }

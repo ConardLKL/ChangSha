@@ -158,10 +158,10 @@ public class Main extends Applet {
                 
                 
             case INS.WRITE_UID:
-                cos.writeUID(apduin);
+                changsha.writeUID(apduin);
                 break;
             case INS.GET_MESSAGE:
-                cos.getMessage(apduin);
+                changsha.getMessage(apduin);
                 break;
                 
                 
@@ -204,6 +204,9 @@ public class Main extends Applet {
                 break;
             case INS.CARD_BLOCK:
             	cos.cardBlock(apduin);
+            	break;
+            case INS.VERIFY:
+            	cos.verify(apduin);
             	break;
                 
            

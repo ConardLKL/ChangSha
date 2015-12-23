@@ -65,6 +65,7 @@ public class Changsha {
     COS cos;
     MyRandom myRandom;
     byte[] random;
+    byte[] UID;
     
     
     public Changsha(COS c, MyRandom rand)
@@ -483,7 +484,7 @@ public class Changsha {
         byte sfi = (byte)((apdu.p2 & 0xFF) >> 3);
         
         if (sfi != 0x17)
-             ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+             ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
             
         byte[] data = new byte[48];
         Util.arrayCopy(buffer, (short)0, data, (short)0, (short)48);
@@ -519,13 +520,14 @@ public class Changsha {
         
         
         // gen MAC1
-        //temp = money4 tradeType1 ternimalId6 terminalDate4 ternimalTime3
+        //temp = money4 tradeType1 ternimalId6 terminalDate4 ternimalTime3 UID
         Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
         temp[4] = TRADE_TYPE_CAPP_PURCHASE;
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(terminalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
+        Util.arrayCopy(UID, (short)0, temp, (short)18, (short)UID.length);//用户卡安全认证识别码
         
-        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)18, MAC1);
+        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)27, MAC1);
         if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
         {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
@@ -612,7 +614,47 @@ public class Changsha {
         apdu.le = 8;
     }
     
+
+    public void writeUID(MyAPDU apdu) throws ISOException
+    {
+        if (apdu.cla != (byte)0x00)
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        
+        if (apdu.ins != (byte)0x22)
+            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        
+        if (apdu.p1 != (byte)0x00)
+            ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        
+        if (apdu.p2 != (byte)0x00)
+            ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        
+        UID = new byte[apdu.lc];
+        Util.arrayCopy(apdu.getBuffer(), (short)0, UID, (short)0, apdu.lc);
+        
+        apdu.le = 0;
+    }
     
+    public void getMessage(MyAPDU apdu) throws ISOException
+    {
+         if (apdu.cla != (byte)0x80)
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+            
+        if (apdu.ins != (byte)0xCA)
+        {
+            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
+        
+        if (UID == null)
+            ISOException.throwIt(ISO7816.SW_WARNING_STATE_UNCHANGED);
+            
+        short len = (short)UID.length;
+        
+        Util.arrayCopy(UID, (short)0, apdu.buffer, (short)0, (short)len);
+        
+        apdu.le = len;
+        
+    }
     
     public void TranProof(MyAPDU apdu)
     {

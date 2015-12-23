@@ -23,7 +23,7 @@ public class COS {
     
     boolean appLock;
     boolean appLockForEver;
-    byte[] UID;
+   
     boolean personalEnd;
     
     byte keyId = (byte)0x10;
@@ -478,46 +478,6 @@ public class COS {
     
   
     
-    public void writeUID(MyAPDU apdu) throws ISOException
-    {
-        if (apdu.cla != (byte)0x00)
-            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-        
-        if (apdu.ins != (byte)0x22)
-            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
-        
-        if (apdu.p1 != (byte)0x00)
-            ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
-        
-        if (apdu.p2 != (byte)0x00)
-            ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
-        
-        UID = new byte[apdu.lc];
-        Util.arrayCopy(apdu.getBuffer(), (short)0, UID, (short)0, apdu.lc);
-        
-        apdu.le = 0;
-    }
-    
-    public void getMessage(MyAPDU apdu) throws ISOException
-    {
-         if (apdu.cla != (byte)0x80)
-            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-            
-        if (apdu.ins != (byte)0xCA)
-        {
-            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
-        }
-        
-        if (UID == null)
-            ISOException.throwIt(ISO7816.SW_WARNING_STATE_UNCHANGED);
-            
-        short len = (short)UID.length;
-        
-        Util.arrayCopy(UID, (short)0, apdu.buffer, (short)0, (short)len);
-        
-        apdu.le = len;
-        
-    }
     
     public void cardBlock(MyAPDU apdu) throws ISOException
     {
@@ -599,7 +559,7 @@ public class COS {
     }
     
     
-    public void getResponse(MyAPDU apdu)
+    public void getResponse(MyAPDU apdu) throws ISOException
     {
        
         
@@ -649,7 +609,7 @@ public class COS {
         return ret;
     }
     
-    public void personalEnd(MyAPDU apdu)
+    public void personalEnd(MyAPDU apdu) throws ISOException
     {
         if (apdu.cla != (byte)0x00)
             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
@@ -662,5 +622,19 @@ public class COS {
         personalEnd = true;
         
         apdu.le = 0;
+    }
+    
+    public void verify(MyAPDU apdu) throws ISOException
+    {
+    	if (apdu.cla != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    	
+    	if (apdu.ins != (byte)0x20)
+    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+    	
+    	if (apdu.p1 != (byte)0x00 || apdu.p2 != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    	
+    	//需要实现verifypin0020 0000 03 123456
     }
 }
