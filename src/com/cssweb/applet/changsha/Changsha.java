@@ -55,7 +55,26 @@ public class Changsha {
     byte[] cappPurchaseRecord = null;
     
     KEY MFDCCK, MFDCMK;
-    KEY ADFDCCK, APPDCMK, DPK, DLK, DTK, PIN, DCMK01, DCMK02, DABK, DAUK, DPUNK, DPRK;
+    KEY ADFDCCK, APPDCMK, DPK, DLK, DTK, PIN, DCMK01, DCMK02, DABK, DAUK, DPUK, DPRK;
+    
+    public static final byte KEY_TAG_DCCK = (byte)0x39; //主控密钥
+    public static final byte KEY_TAG_DCMK = (byte)0x36; //维护密钥
+    
+    
+    public static final byte KEY_TAG_APPDCMK = (byte)0x50; //应用维护密钥
+  //DCMK01，DCMK02 0x36
+    
+    
+    public static final byte KEY_TAG_DPK = (byte)0x06; //消费密钥
+    public static final byte KEY_TAG_DLK = (byte)0x07; //充值密钥
+    public static final byte KEY_TAG_DTK = (byte)0x08; //TAC密钥
+    
+    //public static final byte KEY_TAG_PIN = (byte); //PIN密钥
+    public static final byte KEY_TAG_DPUK = (byte)0x04;//PIN解锁密钥
+    public static final byte KEY_TAG_DPRK = (byte)0x05;//PIN重装密钥
+    
+    public static final byte KEY_TAG_DABK = (byte)0x33;//应用锁定密钥
+    public static final byte KEY_TAG_DAUK = (byte)0x34;//应用解锁密钥
    
     public Changsha(COS c, MyRandom rand)
     {
@@ -671,13 +690,25 @@ public class Changsha {
     public void writeKey(MyAPDU apdu) throws ISOException
     {
     	if (apdu.cla != (byte)0x84)
+    	{
     		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    	}
+    	else
+    	{
+    		
+    	}
     	
     	if (apdu.ins != (byte)0xD4)
     		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
     	
     	byte keyTag = apdu.p1;
     	byte id = apdu.p2;
+    	
+    	if (keyTag == KEY_TAG_DCMK)
+    	{
+    //	if (!apdu.unwrap(keyId))
+    //		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+    	}
     	
     	
     }
