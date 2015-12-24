@@ -1,10 +1,10 @@
 #package specification
-#Wed Dec 23 14:45:07 CST 2015
+#Thu Dec 24 11:08:45 CST 2015
 com.cssweb.applet.changsha-base=internal
 masktools-version=1.1
 com.cssweb.applet.changsha-major=1
 com.cssweb.applet.changsha-clazzes=com.cssweb.applet.changsha.File com.cssweb.applet.changsha.DF com.cssweb.applet.changsha.ADF com.cssweb.applet.changsha.ALG com.cssweb.applet.changsha.BinaryFile com.cssweb.applet.changsha.Changsha com.cssweb.applet.changsha.COS com.cssweb.applet.changsha.DDF com.cssweb.applet.changsha.EP com.cssweb.applet.changsha.INS com.cssweb.applet.changsha.KEY com.cssweb.applet.changsha.Main com.cssweb.applet.changsha.MF com.cssweb.applet.changsha.MyAPDU com.cssweb.applet.changsha.MyRandom com.cssweb.applet.changsha.PIN com.cssweb.applet.changsha.RecordFile com.cssweb.applet.changsha.RecordFileCycler com.cssweb.applet.changsha.RecordFileFixed com.cssweb.applet.changsha.RecordFileKey com.cssweb.applet.changsha.RecordFileTLV
-com.cssweb.applet.changsha-aid=A00000000386980701
+com.cssweb.applet.changsha-aid=A00000000386980702
 jcop-packages=com.cssweb.applet.changsha
 com.cssweb.applet.changsha-minor=0
 com.cssweb.applet.changsha.Main-aid=A00000000386980700

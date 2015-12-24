@@ -142,7 +142,7 @@ public class Main extends Applet {
                 cos.appendRecord(apduin);
                 break;
             case INS.WRITE_KEY:
-                cos.writeKey(apduin);
+                changsha.writeKey(apduin);
                 break;
             case INS.PERSONAL_END:
                 cos.personalEnd(apduin);

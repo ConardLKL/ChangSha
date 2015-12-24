@@ -35,30 +35,8 @@ public class Changsha {
     byte[] TAC = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     byte[] MAC1 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     byte[] iv = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
-        
-   
-    
-    byte[] cappPurchaseRecord = null;
-    RecordFileTLV cappPurchaseRecordFile;// = new RecordFileTLV((short)0x17, (short)0x150, (byte)0xf0, (byte)0xf0);
-    
-   
-    
-    
-    
-
-    
-    //byte[] sessionKey = JCSystem.makeTransientByteArray((short)16, JCSystem.CLEAR_ON_DESELECT);
-    //byte[] sessionKey = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
-    byte[] purchaseSessionKey = new byte[16];
-    byte[] chargeSessionKey = new byte[8];
-    
-    //JCint balanace;
-    EP balance = new EP((byte)0x00, (byte)0x00, (byte)0xf0, (byte)0xf0);
-    
-    
-    
-    
-   
+    byte[] purchaseSessionKey = JCSystem.makeTransientByteArray((short)16, JCSystem.CLEAR_ON_DESELECT);
+    byte[] chargeSessionKey = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     
    
     
@@ -67,11 +45,38 @@ public class Changsha {
     byte[] random;
     byte[] UID;
     
+    File issue;
+    File app, personal;
+    EP balance;
+    File logLocalPurchase, logCharge, logRemotePurchase;
+    File helper, reserved;
     
+    File cappPurchase;
+    byte[] cappPurchaseRecord = null;
+    
+    KEY MFDCCK, MFDCMK;
+    KEY ADFDCCK, APPDCMK, DPK, DLK, DTK, PIN, DCMK01, DCMK02, DABK, DAUK, DPUNK, DPRK;
+   
     public Changsha(COS c, MyRandom rand)
     {
         cos = c;
         myRandom = rand;
+        
+        issue = new BinaryFile((short)0x05, (short)0x28, (byte)0xf0, (byte)0xf0);
+        app = new BinaryFile((short)0x15, (short)0x1E, (byte)0xf0, (byte)0xf0);
+        personal = new BinaryFile((short)0x16, (short)0x5C, (byte)0xf0, (byte)0xf0);
+        
+        balance = new EP((byte)0x02, (byte)0x43, (byte)0xf0, (byte)0xf0);
+        
+        
+        logLocalPurchase = new RecordFileCycler((short)0x18, (byte)0x0A, (byte)0x17, (byte)0xf0, (byte)0xf0);
+        logRemotePurchase = new RecordFileCycler((short)0x10, (byte)0x0A, (byte)0x17, (byte)0xf0, (byte)0xf0);
+        logCharge = new RecordFileCycler((short)0x1A, (byte)0x0A, (byte)0x17, (byte)0xf0, (byte)0xf0);
+        
+        cappPurchase = new RecordFileTLV((short)0x17, (short)0x150, (byte)0xf0, (byte)0xf0);
+        
+        helper = new BinaryFile((short)0x11, (short)0x20, (byte)0xf0, (byte)0xf0);
+        reserved = new BinaryFile((short)0x12, (short)0x20, (byte)0xf0, (byte)0xf0);
     }
     
     //gen random
@@ -656,11 +661,25 @@ public class Changsha {
         
     }
     
-    public void TranProof(MyAPDU apdu)
+    public void TranProof(MyAPDU apdu) throws ISOException
     {
          byte[] buffer = apdu.getBuffer();
         // buffer = 80 5A A1/A2 00 02 Data
         // response buffer = MAC/TAC
+    }
+    
+    public void writeKey(MyAPDU apdu) throws ISOException
+    {
+    	if (apdu.cla != (byte)0x84)
+    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    	
+    	if (apdu.ins != (byte)0xD4)
+    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+    	
+    	byte keyTag = apdu.p1;
+    	byte id = apdu.p2;
+    	
+    	
     }
     
    
