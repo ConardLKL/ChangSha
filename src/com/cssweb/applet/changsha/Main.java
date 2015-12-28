@@ -22,7 +22,7 @@ import javacardx.crypto.Cipher;
 public class Main extends Applet {
     
     MyAPDU  apduin;
-    COS cos;
+   
     Changsha changsha;
     MyRandom random;
     
@@ -41,9 +41,9 @@ public class Main extends Applet {
        
     	random = new MyRandom();
     	
-        cos = new COS();
-        changsha = new Changsha(cos, random);
-        apduin = new MyAPDU(cos, random);
+     
+        changsha = new Changsha(random);
+        apduin = new MyAPDU(random);
         
        
        
@@ -121,31 +121,31 @@ public class Main extends Applet {
         }
         
         switch (apduin.ins) {
-            case INS.CREATE:
-                cos.createFile(apduin);
-                break;
+            //case INS.CREATE:
+           //     cos.createFile(apduin);
+             //   break;
                 
                 
             case INS.SELECT:
-                cos.selectFile(apduin);
+            	changsha.select(apduin);
                 break;
             case INS.READ_BINARY:
-                cos.readBinary(apduin);
+                changsha.readBinary(apduin);
                 break;
             case INS.WRITE_BINARY:
-                cos.writeBinary(apduin);
+            	changsha.writeBinary(apduin);
                 break;
             case INS.READ_RECORD:
-                cos.readRecord(apduin);
+                changsha.readRecord(apduin);
                 break;
             case INS.APPEND_RECORD:
-                cos.appendRecord(apduin);
+                changsha.appendRecord(apduin);
                 break;
             case INS.WRITE_KEY:
                 changsha.writeKey(apduin);
                 break;
             case INS.PERSONAL_END:
-                cos.personalEnd(apduin);
+            	changsha.personalEnd(apduin);
                 break;
                 
                 
@@ -187,7 +187,7 @@ public class Main extends Applet {
 
             case (byte)0xDC:
                 if (apduin.cla == (byte)0x00)
-                    cos.updateRecord(apduin);
+                    changsha.updateRecord(apduin);
                 if (apduin.cla == (byte)0x80)
                     changsha.cappPurchaseUpdate(apduin);
                 break;
@@ -197,16 +197,16 @@ public class Main extends Applet {
 
             
             case INS.APP_BLOCK:
-                cos.appBlock(apduin);
+            	changsha.appBlock(apduin);
                 break;
             case INS.APP_UNBLOCK:
-                cos.appUnBlock(apduin);
+            	changsha.appUnBlock(apduin);
                 break;
             case INS.CARD_BLOCK:
-            	cos.cardBlock(apduin);
+            	changsha.cardBlock(apduin);
             	break;
             case INS.VERIFY:
-            	cos.verify(apduin);
+            	changsha.verify(apduin);
             	break;
                 
            

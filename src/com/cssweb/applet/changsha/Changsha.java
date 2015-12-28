@@ -39,8 +39,16 @@ public class Changsha {
     byte[] chargeSessionKey = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
     
    
+ 
     
-    COS cos;
+    boolean appLock;
+    boolean appLockForEver;
+   
+    boolean personalEnd;
+    
+    byte keyId = (byte)0x10;
+    
+   
     MyRandom myRandom;
     byte[] random;
     byte[] UID;
@@ -54,8 +62,15 @@ public class Changsha {
     File cappPurchase;
     byte[] cappPurchaseRecord = null;
     
+    KEY keyTrans;
+  //传输密钥
+    //keyId keyVersion algId errorCount
+    public static final byte[] TRANS_KEY = {(byte)0x10, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF};
+    
+    
     KEY MFDCCK, MFDCMK;
     KEY ADFDCCK, APPDCMK, DPK, DLK, DTK, PIN, DCMK01, DCMK02, DABK, DAUK, DPUK, DPRK;
+    
     
     public static final byte KEY_TAG_DCCK = (byte)0x39; //主控密钥
     public static final byte KEY_TAG_DCMK = (byte)0x36; //维护密钥
@@ -76,9 +91,10 @@ public class Changsha {
     public static final byte KEY_TAG_DABK = (byte)0x33;//应用锁定密钥
     public static final byte KEY_TAG_DAUK = (byte)0x34;//应用解锁密钥
    
-    public Changsha(COS c, MyRandom rand)
+    
+    public Changsha(MyRandom rand)
     {
-        cos = c;
+       
         myRandom = rand;
         
         issue = new BinaryFile((short)0x05, (short)0x28, (byte)0xf0, (byte)0xf0);
@@ -96,6 +112,8 @@ public class Changsha {
         
         helper = new BinaryFile((short)0x11, (short)0x20, (byte)0xf0, (byte)0xf0);
         reserved = new BinaryFile((short)0x12, (short)0x20, (byte)0xf0, (byte)0xf0);
+        
+        keyTrans = new KEY(TRANS_KEY);
     }
     
     //gen random
@@ -173,11 +191,9 @@ public class Changsha {
 
         // get key index
         byte keyId = buffer[0];
-        KEY key = cos.loadKey(keyId);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
+        
+        
+        
         // get purchase money
         Util.arrayCopy(buffer, (short)1, money, (short)0, (short)4); 
         // get terminal id
@@ -190,7 +206,8 @@ public class Changsha {
         random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
         Util.setShort(temp, (short)4, chargeTradeId);
-        byte[] chargeKey = key.getKey();
+        
+        byte[] chargeKey = DLK.getKey();
         ALG.genSessionKey(chargeKey, temp, (short)6, chargeSessionKey);
         
         
@@ -208,8 +225,8 @@ public class Changsha {
         // response buffer = balance4, chargeTradeId2 keyVersion1 AlgId1 random4 MAC(1)4
         Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
         Util.setShort(buffer, (short)4, chargeTradeId);
-        buffer[6] = key.getKeyVersion();
-        buffer[7] = key.getAlgId();
+        buffer[6] = DLK.getKeyVersion();
+        buffer[7] = DLK.getAlgId();
         Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4); // random
         Util.arrayCopy(MAC1, (short)0, buffer, (short)12, (short)4);
         apdu.le = 16;
@@ -252,9 +269,8 @@ public class Changsha {
         Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, log, (short)16, (short)7);
         
-        if (!cos.appendLog((short)0x1A, log))
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
-                
+        ((RecordFileCycler)logCharge).addRecord(log);
+        
         JCSystem.commitTransaction();
         
         
@@ -273,12 +289,8 @@ public class Changsha {
         byte[] right = new byte[8];
         
         
-        KEY key = cos.loadKey((byte)0x60);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        byte[] TACKey = key.getKey();
+        
+        byte[] TACKey = DTK.getKey();
         
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
@@ -300,12 +312,8 @@ public class Changsha {
         //buffer = CLA INS P1 P2 LC keyIndex1 money4 terminalId6
         // get key index
         byte keyId = buffer[0];
-        KEY key = cos.loadKey(keyId);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        purchaseKey = key.getKey();
+        
+        purchaseKey = DPK.getKey();
         
         // get purchase money
         byte[] temp = new byte[4];
@@ -329,8 +337,8 @@ public class Changsha {
         byte[] baBalance = balance.toBytes();
         Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
         Util.setShort(buffer, (short)4, purchaseTradeId);
-        buffer[6] = key.getKeyVersion();
-        buffer[7] = key.getAlgId();
+        buffer[6] = DPK.getKeyVersion();
+        buffer[7] = DPK.getAlgId();
         myRandom.genRandom();
         random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
@@ -392,12 +400,8 @@ public class Changsha {
         byte[] left = new byte[8];
         byte[] right = new byte[8];
         
-        KEY key = cos.loadKey((byte)0x60);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        byte[] TACKey = key.getKey();
+       
+        byte[] TACKey = DTK.getKey();
         
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
@@ -426,8 +430,8 @@ public class Changsha {
         Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, log, (short)16, (short)7);
         
-        if (!cos.appendLog((short)0x18, log))
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+        ((RecordFileCycler)logLocalPurchase).addRecord(log);
+        
 
         JCSystem.commitTransaction();
         
@@ -453,12 +457,8 @@ public class Changsha {
 
         // get key index
         byte keyId = buffer[0];
-        KEY key = cos.loadKey(keyId);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        purchaseKey = key.getKey();
+        
+        purchaseKey = DPK.getKey();
         Util.arrayCopy(buffer, (short)1, money, (short)0, (short)4);
         Util.arrayCopy(buffer, (short)5, terminalId, (short)0, (short)6);
 
@@ -481,9 +481,9 @@ public class Changsha {
         
         // get keyVersion, algId by keyIndex
         // set key version
-        buffer[6] = key.getKeyVersion();
+        buffer[6] = DPK.getKeyVersion();
         // set alg type
-        buffer[7] = key.getAlgId();
+        buffer[7] = DPK.getAlgId();
         
         // set random
         myRandom.genRandom();
@@ -567,12 +567,8 @@ public class Changsha {
         
         byte[] left = new byte[8];
         byte[] right = new byte[8];
-        KEY key = cos.loadKey((byte)0x60);
-        if (key == null)
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-        byte[] TACKey = key.getKey();
+        
+        byte[] TACKey = DTK.getKey();
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
         byte[] tacKey = ALG.bytesXOR(left, right);
@@ -601,9 +597,8 @@ public class Changsha {
 
             //step 3
             // update capp record
-            boolean ret = cos.updateCAPPPurchaseRecord((short)0x17, cappPurchaseRecord[0], cappPurchaseRecord);
-            if (!ret)
-                 ISOException.throwIt(ISO7816.SW_RECORD_NOT_FOUND);
+            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+           
             
             //step 4
             byte[] log = new byte[23];
@@ -613,20 +608,16 @@ public class Changsha {
             Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
             Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
             
-           if (!cos.appendLog((short)0x18, log))
-               ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
-
-
+            ((RecordFileCycler)logLocalPurchase).addRecord(log);
+           
             JCSystem.commitTransaction();
         }
         else
         {
             // status isn't 0x00 
             //save to file
-            boolean ret = cos.updateCAPPPurchaseRecord((short)0x17, cappPurchaseRecord[0], cappPurchaseRecord);
-            if (!ret)
-                 ISOException.throwIt(ISO7816.SW_RECORD_NOT_FOUND);
-            
+           
+            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
         }
         
         
@@ -704,14 +695,525 @@ public class Changsha {
     	byte keyTag = apdu.p1;
     	byte id = apdu.p2;
     	
-    	if (keyTag == KEY_TAG_DCMK)
+    	
+    	if (keyTag == KEY_TAG_DCCK)
     	{
-    //	if (!apdu.unwrap(keyId))
-    //		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+    		if (!apdu.unwrap(keyTrans))
+    			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+    		
+    		
     	}
     	
     	
     }
     
-   
-}
+
+    public void readBinary(MyAPDU apdu) throws ISOException
+    {
+    	if (apdu.cla == (byte)0x04)
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+    	
+         //0x7F=0111 1111
+        //      100X XXXX
+        short sfi =  (short) (apdu.p1 & (byte)0x7F);
+        
+       
+       
+        
+        BinaryFile file = null;
+        
+        if (sfi == issue.getSFI())
+        {
+        	file = (BinaryFile) issue;
+        }
+        else if(sfi == app.getSFI())
+        {
+        	file = (BinaryFile) app;
+        }
+        else if(sfi == personal.getSFI())
+        {
+        	file = (BinaryFile) personal;
+        }
+        else if(sfi == helper.getSFI())
+        {
+        	file = (BinaryFile) helper;
+        }
+        else if(sfi == reserved.getSFI())
+        {
+        	file = (BinaryFile) reserved;
+        }
+        else
+        {
+        	file = null;
+        }
+        
+        if (file != null)
+        {
+            byte[] out = file.getData();
+            
+            Util.arrayCopy(out, (byte)0x00, apdu.buffer, (short)0x00, (short)out.length);
+            apdu.le = (short)out.length;
+        }
+        else
+        {
+            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+        }   
+    }
+    
+
+    public void writeBinary(MyAPDU apdu) throws ISOException
+    {
+        //0x7F=0111 1111
+        //     100X XXXX
+        byte sfi = (byte) (apdu.p1 & 0x7F);
+        
+       
+        if (apdu.cla == (byte)0x04)
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+        
+        
+        BinaryFile file = null;
+        
+        if (sfi == issue.getSFI())
+        {
+        	file = (BinaryFile) issue;
+        }
+        else if(sfi == app.getSFI())
+        {
+        	file = (BinaryFile) app;
+        }
+        else if(sfi == personal.getSFI())
+        {
+        	file = (BinaryFile) personal;
+        }
+        else if(sfi == helper.getSFI())
+        {
+        	file = (BinaryFile) helper;
+        }
+        else if(sfi == reserved.getSFI())
+        {
+        	file = (BinaryFile) reserved;
+        }
+        else
+        {
+        	file = null;
+        }
+        
+        
+        if (file != null)
+        {
+            byte[] data = new byte[apdu.lc];
+            Util.arrayCopyNonAtomic(apdu.buffer, (short)0, data, (short)0, apdu.lc);
+            
+            file.setData(data);
+        }
+        else
+        {
+            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+        }
+    }
+    
+
+    public void readRecord(MyAPDU apdu) throws ISOException
+    {
+        byte[] buffer = apdu.getBuffer();
+        
+        byte recordId = 0;
+        byte tag = 0;
+        
+        if (apdu.cla == (byte)0x04)
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+       
+        
+        //sfi
+        //XXXX X000 //tag
+        //XXXX X100 //id
+       
+        
+        byte t = (byte)(apdu.p2 << 5);
+        
+        
+        if (t == (byte)0x00) //0000 0000
+        {
+            tag = apdu.p1;
+        }
+        else if (t == (byte)0x80) //0000 0100 <<5         1000 0000
+        {
+            recordId = apdu.p1;
+           
+        }
+        else
+        {
+            
+        }
+        
+        //0xF8=1111 1000
+        byte sfi = (byte)((apdu.p2 & 0xF8) >> 3);
+        
+        
+        
+        RecordFile file = null;
+        
+        if (sfi == logLocalPurchase.getSFI())
+        {
+        	file = (RecordFile) logLocalPurchase;
+        }
+        else if(sfi == logCharge.getSFI())
+        {
+        	file = (RecordFile) logCharge;
+        }
+        else if(sfi == logRemotePurchase.getSFI())
+        {
+        	file = (RecordFile) logRemotePurchase;
+        }
+        else if(sfi == cappPurchase.getSFI())
+        {
+        	file = (RecordFile) cappPurchase;
+        }
+        else
+        {
+        	ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+        }
+        
+             
+            if (file != null)
+            {
+                byte[] data = null;
+                
+                if (t == (byte)0x00)
+                    data = file.getRecordByTag(tag);
+                else
+                    data = file.getRecordById(recordId);
+
+                if (data != null)
+                {
+                    Util.arrayCopy(data, (byte)0x00, buffer, (short)0x00, (short)data.length);
+                    apdu.le = (short)data.length;
+                }
+            }
+    }
+
+    public void updateRecord(MyAPDU apdu) throws ISOException
+    {
+       
+        
+        byte recordId = 0;
+        byte tag = 0;
+        
+        //sfi
+        //XXXX X000 //tag
+        //XXXX X100 //id
+        
+        if (apdu.cla == (byte)0x04)
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+       
+        
+        byte t = (byte)(apdu.p2 << 5);
+        if (t == (byte)0x00) //0000 0000
+        {
+            tag = apdu.p1;
+        }
+        else if (t == (byte)0x80) //0000 0100 <<5         1000 0000
+        {
+            recordId = apdu.p1;
+        }
+        else
+        {
+        }
+         
+        byte sfi = (byte)((apdu.p2 & 0xF8) >> 3);
+        
+       byte[] record = new byte[apdu.lc];
+       Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, apdu.lc);
+        
+        
+       RecordFile file = null;
+       
+       if (sfi == logLocalPurchase.getSFI())
+       {
+       	file = (RecordFile) logLocalPurchase;
+       }
+       else if(sfi == logCharge.getSFI())
+       {
+       	file = (RecordFile) logCharge;
+       }
+       else if(sfi == logRemotePurchase.getSFI())
+       {
+       	file = (RecordFile) logRemotePurchase;
+       }
+       else if(sfi == cappPurchase.getSFI())
+       {
+       	file = (RecordFile) cappPurchase;
+       }
+       else
+       {
+       	ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+       }
+       
+            if (file != null)
+            {
+                if (t == (byte)0x00)
+                {
+                    if (!file.updateRecordByTag(tag, record))
+                        ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+                }
+                else
+                {
+                    if (!file.updateRecordById(recordId, record))
+                        ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+                }
+            }
+    }
+    
+    public void appendRecord(MyAPDU apdu) throws ISOException
+    {
+        byte recordId = 0;
+        byte tag = 0;
+        
+        //sfi
+        //XXXX X000 //tag
+        //XXXX X100 //id
+        
+        if (apdu.cla == (byte)0x04)
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+       
+        
+        byte t = (byte)(apdu.p2 << 5);
+        if (t == (byte)0x00) //0000 0000
+        {
+            tag = apdu.p1;
+            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+        }
+        else if (t == (byte)0x80) //0000 0100 <<5         1000 0000
+        {
+            recordId = apdu.p1;
+        }
+        else
+        {
+        }
+         
+        byte sfi = (byte)((apdu.p2 & 0xF8) >> 3);
+        
+        
+        
+        byte[] record = new byte[apdu.lc];
+        
+        Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, apdu.lc);
+        
+        RecordFile file = null;
+        
+        if (sfi == logLocalPurchase.getSFI())
+        {
+        	file = (RecordFile) logLocalPurchase;
+        }
+        else if(sfi == logCharge.getSFI())
+        {
+        	file = (RecordFile) logCharge;
+        }
+        else if(sfi == logRemotePurchase.getSFI())
+        {
+        	file = (RecordFile) logRemotePurchase;
+        }
+        else if(sfi == cappPurchase.getSFI())
+        {
+        	file = (RecordFile) cappPurchase;
+        }
+        else
+        {
+        	ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+        }
+        
+            
+        if (file != null)
+        {
+           if (!file.addRecord(recordId, record))
+               ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        }            
+    }
+    
+    
+
+    
+    
+    public void cardBlock(MyAPDU apdu) throws ISOException
+    {
+        if (apdu.cla != (byte)0x84)
+        {
+        	ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
+        else
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+        
+        if (apdu.ins != (byte)0x16)
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        
+        if (apdu.p1 != (byte)0x00)
+        	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        
+        if (apdu.p2 != (byte)0x00)
+        	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    }
+    
+    public void appBlock(MyAPDU apdu) throws ISOException
+    {
+        if (apdu.cla != (byte)0x84)
+        {
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
+        else
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+        
+        if (apdu.ins != (byte)0x1E)
+        {
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
+        
+        if (apdu.p2 == (byte)0x00)
+            appLock = true;
+        else if (apdu.p2 == (byte)0x01)
+            appLockForEver = true;
+        else
+            ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        
+        apdu.le = 0;
+    }
+    
+    public void appUnBlock(MyAPDU apdu) throws ISOException
+    {
+        if (apdu.cla != (byte)0x84)
+        {
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
+        else
+        {
+        	//if (!apdu.unwrap(keyId))
+        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+        
+        if (apdu.ins != (byte)0x18)
+        {
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
+        
+        if(appLockForEver)
+        	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        
+        
+        
+        if(appLock)
+             appLock = false;
+        else 
+             ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        
+        apdu.le = (short)0;
+    }
+    
+    
+    public void getResponse(MyAPDU apdu) throws ISOException
+    {
+       
+        
+        
+    }
+    
+    
+    
+    public void personalEnd(MyAPDU apdu) throws ISOException
+    {
+        if (apdu.cla != (byte)0x00)
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+            
+        if (apdu.ins != (byte)0x08)
+        {
+            ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
+        
+        personalEnd = true;
+        
+        apdu.le = 0;
+    }
+    
+    public void verify(MyAPDU apdu) throws ISOException
+    {
+    	if (apdu.cla != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    	
+    	if (apdu.ins != (byte)0x20)
+    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+    	
+    	if (apdu.p1 != (byte)0x00 || apdu.p2 != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    	
+    	//需要实现verifypin0020 0000 03 123456
+    }
+    
+    public void select(MyAPDU apdu) throws ISOException
+    {
+        //00 a4 04 00 lc filename
+        // 0x00 select by SFI
+        // 0x04 select by name
+    	if (apdu.p1 != 0x04 && apdu.p2 != 0x00)
+    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    		
+        byte[] fileName = new byte[apdu.lc];
+        Util.arrayCopy(apdu.buffer, (short)0, fileName, (short)0, apdu.lc);
+        
+     
+        byte[] AID = {(byte)0xA0, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x03, (byte)0x86, (byte)0x98, (byte)0x07, (byte)0x00};
+        
+        //1PAY.SYS.DDF01
+        byte[] MF = {(byte)0x31, (byte)0x50, (byte)0x41, (byte)0x59, (byte)0x2E, (byte)0x53, (byte)0x59, (byte)0x53, (byte)0x2E, (byte)0x44, (byte)0x44, (byte)0x46, (byte)0x30, (byte)0x31};
+        
+        // ADF
+        byte[] ADF = {(byte)0xA0, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x03, (byte)0x86, (byte)0x98, (byte)0x07, (byte)0x01};
+        
+        //select AID
+        if (Util.arrayCompare(fileName, (short)0, AID, (short)0, (short)AID.length) == 0)
+        {
+            //return AID FCI
+            apdu.le = 0;
+           
+        }
+      //select PSE
+        else if(Util.arrayCompare(fileName, (short)0, MF, (short)0, (short)MF.length) == 0)
+        {
+        	//return MF FCI
+        	apdu.le = 0;
+        	
+        }
+        //select ADF
+        else if (Util.arrayCompare(fileName, (short)0, ADF, (short)0, (short)ADF.length) == 0)
+        {
+            //return ADF FCI
+            apdu.le = 0;
+           
+        }
+        else
+        {
+        	ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+        }
+    }
+    
+    
+}//end class

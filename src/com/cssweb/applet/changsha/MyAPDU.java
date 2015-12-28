@@ -21,19 +21,19 @@ public class MyAPDU {
     
     public   byte[]  allBuffer; //CLA=0x04 or 0x84
     
-    private COS cos;
+
     
     private MyRandom myRandom;
     private byte[] random;
     
     
    
-    public  MyAPDU(COS c, MyRandom rand) 
+    public  MyAPDU(MyRandom rand) 
     {
        buffer = JCSystem.makeTransientByteArray((short)512, JCSystem.CLEAR_ON_DESELECT);
        allBuffer = JCSystem.makeTransientByteArray((short)516, JCSystem.CLEAR_ON_DESELECT);
        
-       cos = c;
+     
        myRandom = rand;
     } 
     
@@ -71,18 +71,11 @@ public class MyAPDU {
         return false;
     }
     
-    public boolean unwrap(byte keyId)
+    public boolean unwrap(KEY key)
     {
     	boolean ret = false;
     	
-    	KEY key = cos.loadKey(keyId);
-    	if (key == null)
-    	{
-    		
-    		//ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
-    		ret = false;
-    		return ret;
-    	}
+    	
     	byte[] k = key.getKey();
     		
     	
