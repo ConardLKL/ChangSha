@@ -1276,6 +1276,7 @@ public class Changsha {
     			}
     		}
     	}
+    	
     	else if(keyTag == KEY_TAG_APPDCMK)
     	{
     		//应用维护密钥
@@ -1287,6 +1288,7 @@ public class Changsha {
 		
 			ADFDCMK = new KEY(out);
     	}
+    	
     	else if(keyTag == KEY_TAG_DPK)
     	{
     		//消费密钥
@@ -1342,6 +1344,7 @@ public class Changsha {
 		
 			DAUK = new KEY(out);
     	}
+    	
     	else if(keyTag == KEY_TAG_DPUK)
     	{
     		//PIN解锁密钥
@@ -1353,6 +1356,7 @@ public class Changsha {
 		
 			DPUK = new KEY(out);
     	}
+    	
     	else if(keyTag == KEY_TAG_DPRK)
     	{
     		//PIN重装密钥

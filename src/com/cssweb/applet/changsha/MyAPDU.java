@@ -30,8 +30,10 @@ public class MyAPDU {
    
     public  MyAPDU(MyRandom rand) 
     {
-       buffer = JCSystem.makeTransientByteArray((short)512, JCSystem.CLEAR_ON_DESELECT);
-       allBuffer = JCSystem.makeTransientByteArray((short)516, JCSystem.CLEAR_ON_DESELECT);
+    	buffer = new byte[512];
+    	allBuffer = new byte[512];
+       //buffer = JCSystem.makeTransientByteArray((short)512, JCSystem.CLEAR_ON_DESELECT);
+      // allBuffer = JCSystem.makeTransientByteArray((short)512, JCSystem.CLEAR_ON_DESELECT);
        
      
        myRandom = rand;

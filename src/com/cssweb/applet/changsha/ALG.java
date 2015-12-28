@@ -125,13 +125,14 @@ public class ALG {
         
         
         short count = (short)(data.length/8);
+        byte[] block = new byte[8];
         for (short i=1; i<count; i++)
         {
-            byte[] block = new byte[8];
+            
             Util.arrayCopy(data, pos, block, (short)0, (short)8);
             pos += 8;
 
-            // 存放异或结果
+  
             input = bytesXOR(output, block);
 
             encrypt(left, input, (short)0, (short)8, output, (short)0);
