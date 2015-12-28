@@ -45,7 +45,8 @@ public class MyAPDU {
     public boolean APDUContainData(byte ins) {
         switch (ins)
         {
-            case INS.CREATE:
+            //case INS.CREATE:
+        case INS.WRITE_KEY:
             case INS.SELECT:
                 
             case INS.WRITE_BINARY:
@@ -99,8 +100,8 @@ public class MyAPDU {
     	
     	
     	byte[] mac = new byte[8];
-    	
     	ALG.genMACOrTAC(k, iv, allBuffer, (short)(5+len), mac);
+    	
     	
     	byte[] MAC = new byte[4];
     	Util.arrayCopyNonAtomic(buffer, len, MAC, (short)0, (short)4);

@@ -27,6 +27,10 @@ public class KEY  {
         algId = k[2];
         errorCount = k[3];
         
+        key = new byte[16];
+        Util.arrayCopy(k, (short)5, key, (short)0, (short)16);
+        
+        /*
         if (keyId == (byte)0x08)
         {
             key = new byte[6];
@@ -37,6 +41,7 @@ public class KEY  {
             key = new byte[16];
             Util.arrayCopy(k, (short)4, key, (short)0, (short)16);
         }
+        */
     }
     
     public byte[] getKey()

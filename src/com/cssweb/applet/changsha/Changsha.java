@@ -62,22 +62,26 @@ public class Changsha {
     File cappPurchase;
     byte[] cappPurchaseRecord = null;
     
+    public static final byte PATH_MF = (byte)0x00;
+    public static final byte PATH_ADF = (byte)0x01;
+    byte path;
+    
+    //传输密钥
     KEY keyTrans;
-  //传输密钥
     //keyId keyVersion algId errorCount
-    public static final byte[] TRANS_KEY = {(byte)0x10, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF};
+    public static final byte[] TRANS_KEY = {(byte)0x14, (byte)0x01, (byte)0x00, (byte)0x33, (byte)0x00, (byte)0x31, (byte)0x32, (byte)0x33, (byte)0x34, (byte)0x35, (byte)0x36, (byte)0x37, (byte)0x38, (byte)0x31, (byte)0x32, (byte)0x33, (byte)0x34, (byte)0x35, (byte)0x36, (byte)0x37, (byte)0x38, (byte)0x80, (byte)0x00, (byte)0x00};
     
     
     KEY MFDCCK, MFDCMK;
-    KEY ADFDCCK, APPDCMK, DPK, DLK, DTK, PIN, DCMK01, DCMK02, DABK, DAUK, DPUK, DPRK;
+    KEY ADFDCCK, ADFDCMK, ADFDCMK01, ADFDCMK02, DPK, DLK, DTK, PIN, DABK, DAUK, DPUK, DPRK;
     
     
     public static final byte KEY_TAG_DCCK = (byte)0x39; //主控密钥
+    
     public static final byte KEY_TAG_DCMK = (byte)0x36; //维护密钥
-    
-    
+    //ADFDCMK01，ADFDCMK02 0x36
     public static final byte KEY_TAG_APPDCMK = (byte)0x50; //应用维护密钥
-  //DCMK01，DCMK02 0x36
+  
     
     
     public static final byte KEY_TAG_DPK = (byte)0x06; //消费密钥
@@ -91,6 +95,8 @@ public class Changsha {
     public static final byte KEY_TAG_DABK = (byte)0x33;//应用锁定密钥
     public static final byte KEY_TAG_DAUK = (byte)0x34;//应用解锁密钥
    
+    
+    
     
     public Changsha(MyRandom rand)
     {
@@ -678,35 +684,6 @@ public class Changsha {
         // response buffer = MAC/TAC
     }
     
-    public void writeKey(MyAPDU apdu) throws ISOException
-    {
-    	if (apdu.cla != (byte)0x84)
-    	{
-    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-    	}
-    	else
-    	{
-    		
-    	}
-    	
-    	if (apdu.ins != (byte)0xD4)
-    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
-    	
-    	byte keyTag = apdu.p1;
-    	byte id = apdu.p2;
-    	
-    	
-    	if (keyTag == KEY_TAG_DCCK)
-    	{
-    		if (!apdu.unwrap(keyTrans))
-    			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
-    		
-    		
-    	}
-    	
-    	
-    }
-    
 
     public void readBinary(MyAPDU apdu) throws ISOException
     {
@@ -1192,6 +1169,7 @@ public class Changsha {
         if (Util.arrayCompare(fileName, (short)0, AID, (short)0, (short)AID.length) == 0)
         {
             //return AID FCI
+        	path = PATH_MF;
             apdu.le = 0;
            
         }
@@ -1199,6 +1177,7 @@ public class Changsha {
         else if(Util.arrayCompare(fileName, (short)0, MF, (short)0, (short)MF.length) == 0)
         {
         	//return MF FCI
+        	path = PATH_MF;
         	apdu.le = 0;
         	
         }
@@ -1206,6 +1185,7 @@ public class Changsha {
         else if (Util.arrayCompare(fileName, (short)0, ADF, (short)0, (short)ADF.length) == 0)
         {
             //return ADF FCI
+        	path = PATH_ADF;
             apdu.le = 0;
            
         }
@@ -1213,6 +1193,181 @@ public class Changsha {
         {
         	ISOException.throwIt(ISO7816.SW_WRONG_DATA);
         }
+    }
+    
+
+    public void writeKey(MyAPDU apdu) throws ISOException
+    {
+    	if (apdu.cla != (byte)0x84)
+    	{
+    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    	}
+    	
+    	
+    	if (apdu.ins != (byte)0xD4)
+    	{
+    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+    	}
+    	
+    	byte keyTag = apdu.p1;
+    	byte id = apdu.p2;
+    	
+    	byte[] out = new byte[24];
+    	
+    	byte[] temp = null;
+    	
+    	
+    	if (keyTag == KEY_TAG_DCCK)
+    	{
+    		if (path == PATH_MF)
+    		{
+    			//卡片主控密钥
+	    		if (!apdu.unwrap(keyTrans))
+	    			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+	    		
+	    		
+	    		ALG.decrypt(keyTrans.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+	    		
+	    		MFDCCK = new KEY(out);
+	    		
+    		}
+    		else
+    		{
+    			//应用主控密钥
+    			if (!apdu.unwrap(MFDCCK))
+	    			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+	    		
+	    		
+	    		ALG.decrypt(MFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+	    		
+	    		ADFDCCK = new KEY(out);
+	    		
+    		}
+    	}
+    	else if (keyTag == KEY_TAG_DCMK)
+    	{
+    		if (path == PATH_MF)
+    		{
+    			//卡片维护密钥
+    			if (!apdu.unwrap(MFDCCK))
+    				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+    		
+    		
+    			ALG.decrypt(MFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+    		
+    			MFDCMK = new KEY(out);
+    		}
+    		else
+    		{
+    			//应用维护密钥
+    			if (!apdu.unwrap(ADFDCCK))
+    				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+    		
+    		
+    			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+    			
+    			if (id == (byte)0x00)
+    			{
+    				ADFDCMK01 = new KEY(out);
+    			}
+    			else
+    			{
+    				ADFDCMK02 = new KEY(out);
+    			}
+    		}
+    	}
+    	else if(keyTag == KEY_TAG_APPDCMK)
+    	{
+    		//应用维护密钥
+			if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			ADFDCMK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DPK)
+    	{
+    		//消费密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DPK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DLK)
+    	{
+    		//充值密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DLK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DTK)
+    	{
+    		//TAC密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DTK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DABK)
+    	{
+    		//应用锁定密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DABK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DAUK)
+    	{
+    		//应用解锁密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DAUK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DPUK)
+    	{
+    		//PIN解锁密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DPUK = new KEY(out);
+    	}
+    	else if(keyTag == KEY_TAG_DPRK)
+    	{
+    		//PIN重装密钥
+    		if (!apdu.unwrap(ADFDCCK))
+				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		
+		
+			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+		
+			DPRK = new KEY(out);
+    	}
+    	else
+    	{
+    		
+    	}
     }
     
     

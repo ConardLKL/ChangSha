@@ -10,16 +10,13 @@ appManage 应用维护子密钥1，appControl
 FileManage1， appControl
 FileManage2， appControl
 appManage 复合消费维护密钥，appControl
-pinUnblock， appControl
-pinReload，appControl
 purchase1， appControl
 load1， appControl
 load2， appControl
 tac，appControl
 upload， appControl
 修改透支， 使用appcontrol
-应用锁定密钥，使用appcontrol
-写应用解锁密钥，使用appcontrol
+
 
 公共应用基本数据文件, FM1
 辅助信息文件，采用FM2
