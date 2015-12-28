@@ -46,8 +46,9 @@ public class MyAPDU {
         switch (ins)
         {
             //case INS.CREATE:
+        case INS.SELECT:
         case INS.WRITE_KEY:
-            case INS.SELECT:
+            
                 
             case INS.WRITE_BINARY:
             case INS.WRITE_RECORD:

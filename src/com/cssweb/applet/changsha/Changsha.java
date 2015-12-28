@@ -1166,28 +1166,28 @@ public class Changsha {
         byte[] ADF = {(byte)0xA0, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x03, (byte)0x86, (byte)0x98, (byte)0x07, (byte)0x01};
         
         //select AID
-        if (Util.arrayCompare(fileName, (short)0, AID, (short)0, (short)AID.length) == 0)
+        if (fileName.length == AID.length && Util.arrayCompare(fileName, (short)0, AID, (short)0, (short)AID.length) == 0)
         {
             //return AID FCI
         	path = PATH_MF;
             apdu.le = 0;
-           
+           return;
         }
       //select PSE
-        else if(Util.arrayCompare(fileName, (short)0, MF, (short)0, (short)MF.length) == 0)
+        else if(fileName.length == MF.length && Util.arrayCompare(fileName, (short)0, MF, (short)0, (short)MF.length) == 0)
         {
         	//return MF FCI
         	path = PATH_MF;
         	apdu.le = 0;
-        	
+        	return;
         }
         //select ADF
-        else if (Util.arrayCompare(fileName, (short)0, ADF, (short)0, (short)ADF.length) == 0)
+        else if(fileName.length == ADF.length && Util.arrayCompare(fileName, (short)0, ADF, (short)0, (short)ADF.length) == 0)
         {
             //return ADF FCI
         	path = PATH_ADF;
             apdu.le = 0;
-           
+           return;
         }
         else
         {
