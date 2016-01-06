@@ -225,6 +225,9 @@ public class Main extends Applet {
             case INS.TAC_TEST:
                 ALG.testTAC(apduin);
                 break;
+            case (byte)0x03:
+            	changsha.getKey(apduin);
+            	break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
 	}

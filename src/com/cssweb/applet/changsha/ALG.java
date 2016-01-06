@@ -173,14 +173,23 @@ public class ALG {
     {
         Cipher cipher = Cipher.getInstance(Cipher.ALG_DES_ECB_NOPAD, false);
          
-       
-        DESKey desKey = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES, false);
-         
+        
+        //DESKey desKey = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES, false);
+        //DESKey desKey = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES3_2KEY, false);
+        DESKey desKey;
+        if (key.length == 8)
+        {
+        	desKey = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES, false);
+        }
+        else  
+        {
+        	desKey = (DESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_DES, KeyBuilder.LENGTH_DES3_2KEY, false);
+        }
         desKey.setKey(key, (short)0);
 
         cipher.init(desKey, Cipher.MODE_DECRYPT);
            
-        cipher.doFinal(src, srcOffset, (short)srcLen, out, outOffset);
+        cipher.doFinal(src, srcOffset, srcLen, out, outOffset);
     }
     
     

@@ -69,7 +69,7 @@ public class Changsha {
     //¥´ ‰√‹‘ø
     KEY keyTrans;
     //keyId keyVersion algId errorCount
-    public static final byte[] TRANS_KEY = {(byte)0x14, (byte)0x01, (byte)0x00, (byte)0x33, (byte)0x00, (byte)0x31, (byte)0x32, (byte)0x33, (byte)0x34, (byte)0x35, (byte)0x36, (byte)0x37, (byte)0x38, (byte)0x31, (byte)0x32, (byte)0x33, (byte)0x34, (byte)0x35, (byte)0x36, (byte)0x37, (byte)0x38, (byte)0x80, (byte)0x00, (byte)0x00};
+    public static final byte[] TRANS_KEY = {(byte)0x14, (byte)0x01, (byte)0x00, (byte)0x33, (byte)0x00, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0x80, (byte)0x00, (byte)0x00};
     
     
     KEY MFDCCK, MFDCMK;
@@ -1222,30 +1222,35 @@ public class Changsha {
     	byte[] out = new byte[24];
     	
     	byte[] temp = null;
+    	byte[] key = null;
     	
     	
     	if (keyType == KEY_TAG_DCCK)
     	{
     		if (path == PATH_MF)
     		{
+    			key = keyTrans.getKey();
+    			
     			//ø®∆¨÷˜øÿ√‹‘ø
-	    		if (!apdu.unwrap(keyTrans))
+	    		if (!apdu.unwrap(key))
 	    			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 	    		
 	    		
-	    		ALG.decrypt(keyTrans.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+	    		ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 	    		
 	    		MFDCCK = new KEY(keyId, out);
 	    		
     		}
     		else
     		{
+    			key = MFDCCK.getKey();
+    			
     			//”¶”√÷˜øÿ√‹‘ø
-    			if (!apdu.unwrap(MFDCCK))
+    			if (!apdu.unwrap(key))
 	    			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 	    		
 	    		
-	    		ALG.decrypt(MFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+	    		ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 	    		
 	    		ADFDCCK = new KEY(keyId, out);
 	    		
@@ -1255,23 +1260,27 @@ public class Changsha {
     	{
     		if (path == PATH_MF)
     		{
+    			key = MFDCCK.getKey();
+    			
     			//ø®∆¨Œ¨ª§√‹‘ø
-    			if (!apdu.unwrap(MFDCCK))
+    			if (!apdu.unwrap(key))
     				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
     		
     		
-    			ALG.decrypt(MFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+    			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
     		
     			MFDCMK = new KEY(keyId, out);
     		}
     		else
     		{
+    			key = ADFDCCK.getKey();
+    			
     			//”¶”√Œ¨ª§√‹‘ø
-    			if (!apdu.unwrap(ADFDCCK))
+    			if (!apdu.unwrap(key))
     				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
     		
     		
-    			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+    			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
     			
     			if (keyId == (byte)0x00)
     			{
@@ -1287,91 +1296,111 @@ public class Changsha {
     	else if(keyType == KEY_TAG_APPDCMK)
     	{
     		//”¶”√Œ¨ª§√‹‘ø
-			if (!apdu.unwrap(ADFDCCK))
+    		key = ADFDCCK.getKey();
+    		
+			if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			short len = apdu.lc;
+			byte[] tmp = new byte[len];
+			Util.arrayCopy(apdu.buffer, (short)0, tmp, (short)0, len);
+			ALG.decrypt(key, tmp, (short)0, len, out, (short)0);
+			
+			//ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			ADFDCMK = new KEY(keyId, out);
     	}
     	
     	else if(keyType == KEY_TAG_DPK)
     	{
+    		key = ADFDCCK.getKey();
     		//œ˚∑—√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DPK = new KEY(keyId, out);
     	}
     	else if(keyType == KEY_TAG_DLK)
     	{
+    		key = ADFDCCK.getKey();
+    		
     		//≥‰÷µ√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DLK = new KEY(keyId, out);
     	}
     	else if(keyType == KEY_TAG_DTK)
     	{
+    		key = ADFDCCK.getKey();
+    		
     		//TAC√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DTK = new KEY(keyId, out);
     	}
     	else if(keyType == KEY_TAG_DABK)
     	{
+    		key = ADFDCCK.getKey();
+    		
     		//”¶”√À¯∂®√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DABK = new KEY(keyId, out);
     	}
     	else if(keyType == KEY_TAG_DAUK)
     	{
+    		key = ADFDCCK.getKey();
+    		
     		//”¶”√Ω‚À¯√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DAUK = new KEY(keyId, out);
     	}
     	
     	else if(keyType == KEY_TAG_DPUK)
     	{
+    		key = ADFDCCK.getKey();
+    		
     		//PINΩ‚À¯√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DPUK = new KEY(keyId, out);
     	}
     	
     	else if(keyType == KEY_TAG_DPRK)
     	{
+    		key = ADFDCCK.getKey();
+    		
     		//PIN÷ÿ◊∞√‹‘ø
-    		if (!apdu.unwrap(ADFDCCK))
+    		if (!apdu.unwrap(key))
 				ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
 		
 		
-			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
+			ALG.decrypt(key, apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
 			DPRK = new KEY(keyId, out);
     	}
@@ -1379,6 +1408,88 @@ public class Changsha {
     	{
     		
     	}
+    	
+    	apdu.le = 0;
+    }
+    
+    public void getKey(MyAPDU apdu) throws ISOException
+    {
+    	 byte[] buffer = apdu.getBuffer();
+    	 
+    	 byte[] key = null;
+    	 
+    	 if (apdu.p1 == (byte)0x00)
+    	 {
+    		 key = MFDCCK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x01)
+    	 {
+    		 key = MFDCMK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x02)
+    	 {
+    		 key = ADFDCCK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x03)
+    	 {
+    		 key = ADFDCMK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x04)
+    	 {
+    		 key = ADFDCMK01.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x05)
+    	 {
+    		 key = ADFDCMK02.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x06)
+    	 {
+    		 
+    	 }
+    	 else if(apdu.p1 == (byte)0x07)
+    	 {
+    		 key = DPK.getKey();
+    		 
+    	 }
+    	 else if(apdu.p1 == (byte)0x08)
+    	 {
+    		 key = DLK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x09)
+    	 {
+    		 key = DTK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x0A)
+    	 {
+    		 key = DABK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x0B)
+    	 {
+    		 key = DAUK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x0C)
+    	 {
+    		 key = DPUK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x0D)
+    	 {
+    		 key = DPRK.getKey();
+    	 }
+    	 else if(apdu.p1 == (byte)0x0E)
+    	 {
+    		 
+    	 }
+    	 else if(apdu.p1 == (byte)0x0F)
+    	 {
+    		 
+    	 }
+    	 else
+    	 {
+    		 
+    	 }
+    	 
+    	 Util.arrayCopyNonAtomic(key, (short)0, buffer, (short)0, (short) key.length);
+    	 apdu.le = (short) key.length;
     }
     
     

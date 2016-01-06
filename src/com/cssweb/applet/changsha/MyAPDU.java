@@ -75,12 +75,12 @@ public class MyAPDU {
         return false;
     }
     
-    public boolean unwrap(KEY key)
+    public boolean unwrap(byte[] key)
     {
     	boolean ret = false;
     	
     	
-    	byte[] k = key.getKey();
+    	
     		
     	
     	byte[] iv = new byte[8];
@@ -103,7 +103,7 @@ public class MyAPDU {
     	
     	
     	byte[] mac = new byte[8];
-    	ALG.genMACOrTAC(k, iv, allBuffer, (short)(5+len), mac);
+    	ALG.genMACOrTAC(key, iv, allBuffer, (short)(5+len), mac);
     	
     	
     	byte[] MAC = new byte[4];
