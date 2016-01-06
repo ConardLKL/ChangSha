@@ -23,7 +23,8 @@ public class INS {
     public static final byte WRITE_BINARY = (byte)0xD6;
     
     public static final byte READ_RECORD = (byte)0xB2;
-    public static final byte WRITE_RECORD = (byte)0xDC;
+    //public static final byte WRITE_RECORD = (byte)0xDC; //CLA=00/04
+    //public static final byte UPDATE_CAPP_PURCHASE = (byte)0xDC; //CLA=80
     public static final byte APPEND_RECORD = (byte)0xE2;
     
     //hua da 
@@ -36,11 +37,11 @@ public class INS {
     
     public static final byte GET_BALANCE = (byte)0x5C;
     public static final byte INIT_PURCHASE_CHARGE = (byte)0x50;
-    public static final byte PURCHASE = (byte)0x30;
-    public static final byte CHARGE = (byte)0x32;
-    public static final byte INIT_CAPP_PURCHASE   = (byte)0x50;
-    public static final  byte UPDATE_CAPP_PURCHASE = (byte)0xDC;
-    public static final  byte CAPP_PURCHASE = (byte)0x54;
+    public static final byte PURCHASE = (byte)0x54;
+    public static final byte CHARGE = (byte)0x52;
+   
+   
+   // public static final  byte CAPP_PURCHASE = (byte)0x54;
     
 
     

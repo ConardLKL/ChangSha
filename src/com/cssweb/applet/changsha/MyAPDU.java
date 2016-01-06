@@ -53,13 +53,13 @@ public class MyAPDU {
             
                 
             case INS.WRITE_BINARY:
-            case INS.WRITE_RECORD:
+            case (byte)0xDC:
             case INS.APPEND_RECORD:
                 
             case INS.INIT_PURCHASE_CHARGE:
             case INS.PURCHASE:
             case INS.CHARGE:
-            case INS.CAPP_PURCHASE:
+            
             case INS.WRITE_UID:
             case INS.EXTERNAL_AUTH:
                 return true;

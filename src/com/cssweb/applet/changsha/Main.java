@@ -170,12 +170,19 @@ public class Main extends Applet {
                 break;
             case INS.INIT_PURCHASE_CHARGE:
             {
-                if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0xA2)
-                    changsha.purchaseInit(apduin);
-                else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0xA1)
-                    changsha.chargeInit(apduin);
+                if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x00)
+                {
+                	changsha.chargeInit(apduin);
+                }
+                else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x01)
+                {
+                	changsha.purchaseInit(apduin);
+                }
                 else
-                    changsha.cappPurchaseInit(apduin);
+                {
+                
+                }
+                    
                 break;
             }
             case INS.CHARGE:
@@ -186,14 +193,12 @@ public class Main extends Applet {
                 break;
 
             case (byte)0xDC:
-                if (apduin.cla == (byte)0x00)
+                if (apduin.cla == (byte)0x00 || apduin.cla == (byte)0x04)
                     changsha.updateRecord(apduin);
                 if (apduin.cla == (byte)0x80)
                     changsha.cappPurchaseUpdate(apduin);
                 break;
-            case INS.CAPP_PURCHASE:
-                changsha.cappPurchase(apduin);
-                break;
+            
 
             
             case INS.APP_BLOCK:

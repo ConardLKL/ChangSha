@@ -17,18 +17,21 @@ public class KEY  {
    byte keyVersion;
    byte algId;
    byte errorCount;
+   byte safeStatus;
    byte[] key;
            
             
-    public KEY(byte[] k)
+    public KEY(byte kid, byte[] k)
     {
-        keyId = k[0];
-        keyVersion = k[1];
-        algId = k[2];
-        errorCount = k[3];
+        keyId = kid; //密钥索引
+        
+        keyVersion = k[0];//密钥版本
+        algId = k[1];//算法标识
+        errorCount = k[2];//错误计数器
+        safeStatus = k[3];//后续安全状态
         
         key = new byte[16];
-        Util.arrayCopy(k, (short)5, key, (short)0, (short)16);
+        Util.arrayCopy(k, (short)4, key, (short)0, (short)16);
         
         /*
         if (keyId == (byte)0x08)
@@ -68,6 +71,11 @@ public class KEY  {
     public byte getErrorCount()
     {
         return errorCount;
+    }
+    
+    public byte getSafeStatus()
+    {
+    	return safeStatus;
     }
     
 }

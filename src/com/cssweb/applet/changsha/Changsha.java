@@ -119,7 +119,7 @@ public class Changsha {
         helper = new BinaryFile((short)0x11, (short)0x20, (byte)0xf0, (byte)0xf0);
         reserved = new BinaryFile((short)0x12, (short)0x20, (byte)0xf0, (byte)0xf0);
         
-        keyTrans = new KEY(TRANS_KEY);
+        keyTrans = new KEY((byte)0x00, TRANS_KEY);
     }
     
     //gen random
@@ -192,7 +192,14 @@ public class Changsha {
 
     public void chargeInit(MyAPDU apdu) throws ISOException
     {
-        byte[] buffer = apdu.getBuffer();
+    	if (apdu.p1 != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    	
+    	if (apdu.p2 != (byte)0x02)
+    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    	
+    	
+    	byte[] buffer = apdu.getBuffer();
         // buffer = CLA INS P1 P2 LC keyIndex1 money4 terminalId6
 
         // get key index
@@ -1209,15 +1216,15 @@ public class Changsha {
     		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
     	}
     	
-    	byte keyTag = apdu.p1;
-    	byte id = apdu.p2;
+    	byte keyType = apdu.p1; //密钥类型
+    	byte keyId = apdu.p2; //密钥索引
     	
     	byte[] out = new byte[24];
     	
     	byte[] temp = null;
     	
     	
-    	if (keyTag == KEY_TAG_DCCK)
+    	if (keyType == KEY_TAG_DCCK)
     	{
     		if (path == PATH_MF)
     		{
@@ -1228,7 +1235,7 @@ public class Changsha {
 	    		
 	    		ALG.decrypt(keyTrans.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 	    		
-	    		MFDCCK = new KEY(out);
+	    		MFDCCK = new KEY(keyId, out);
 	    		
     		}
     		else
@@ -1240,11 +1247,11 @@ public class Changsha {
 	    		
 	    		ALG.decrypt(MFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 	    		
-	    		ADFDCCK = new KEY(out);
+	    		ADFDCCK = new KEY(keyId, out);
 	    		
     		}
     	}
-    	else if (keyTag == KEY_TAG_DCMK)
+    	else if (keyType == KEY_TAG_DCMK)
     	{
     		if (path == PATH_MF)
     		{
@@ -1255,7 +1262,7 @@ public class Changsha {
     		
     			ALG.decrypt(MFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
     		
-    			MFDCMK = new KEY(out);
+    			MFDCMK = new KEY(keyId, out);
     		}
     		else
     		{
@@ -1266,18 +1273,18 @@ public class Changsha {
     		
     			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
     			
-    			if (id == (byte)0x00)
+    			if (keyId == (byte)0x00)
     			{
-    				ADFDCMK01 = new KEY(out);
+    				ADFDCMK01 = new KEY(keyId, out);
     			}
     			else
     			{
-    				ADFDCMK02 = new KEY(out);
+    				ADFDCMK02 = new KEY(keyId, out);
     			}
     		}
     	}
     	
-    	else if(keyTag == KEY_TAG_APPDCMK)
+    	else if(keyType == KEY_TAG_APPDCMK)
     	{
     		//应用维护密钥
 			if (!apdu.unwrap(ADFDCCK))
@@ -1286,10 +1293,10 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			ADFDCMK = new KEY(out);
+			ADFDCMK = new KEY(keyId, out);
     	}
     	
-    	else if(keyTag == KEY_TAG_DPK)
+    	else if(keyType == KEY_TAG_DPK)
     	{
     		//消费密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1298,9 +1305,9 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DPK = new KEY(out);
+			DPK = new KEY(keyId, out);
     	}
-    	else if(keyTag == KEY_TAG_DLK)
+    	else if(keyType == KEY_TAG_DLK)
     	{
     		//充值密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1309,9 +1316,9 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DLK = new KEY(out);
+			DLK = new KEY(keyId, out);
     	}
-    	else if(keyTag == KEY_TAG_DTK)
+    	else if(keyType == KEY_TAG_DTK)
     	{
     		//TAC密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1320,9 +1327,9 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DTK = new KEY(out);
+			DTK = new KEY(keyId, out);
     	}
-    	else if(keyTag == KEY_TAG_DABK)
+    	else if(keyType == KEY_TAG_DABK)
     	{
     		//应用锁定密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1331,9 +1338,9 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DABK = new KEY(out);
+			DABK = new KEY(keyId, out);
     	}
-    	else if(keyTag == KEY_TAG_DAUK)
+    	else if(keyType == KEY_TAG_DAUK)
     	{
     		//应用解锁密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1342,10 +1349,10 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DAUK = new KEY(out);
+			DAUK = new KEY(keyId, out);
     	}
     	
-    	else if(keyTag == KEY_TAG_DPUK)
+    	else if(keyType == KEY_TAG_DPUK)
     	{
     		//PIN解锁密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1354,10 +1361,10 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DPUK = new KEY(out);
+			DPUK = new KEY(keyId, out);
     	}
     	
-    	else if(keyTag == KEY_TAG_DPRK)
+    	else if(keyType == KEY_TAG_DPRK)
     	{
     		//PIN重装密钥
     		if (!apdu.unwrap(ADFDCCK))
@@ -1366,7 +1373,7 @@ public class Changsha {
 		
 			ALG.decrypt(ADFDCCK.getKey(), apdu.buffer, (short)0, apdu.lc, out, (short)0);
 		
-			DPRK = new KEY(out);
+			DPRK = new KEY(keyId, out);
     	}
     	else
     	{
