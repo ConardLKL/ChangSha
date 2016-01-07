@@ -138,9 +138,7 @@ public class Main extends Applet {
             case INS.READ_RECORD:
                 changsha.readRecord(apduin);
                 break;
-            case INS.APPEND_RECORD:
-                changsha.appendRecord(apduin);
-                break;
+           
             case INS.WRITE_KEY:
                 changsha.writeKey(apduin);
                 break;

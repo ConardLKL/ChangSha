@@ -73,8 +73,7 @@ public class RecordFile extends File{
             return false;
             
         
-        if (records[recId] == null)
-            return false;
+       
         
         records[recId] = record;
         
@@ -85,9 +84,12 @@ public class RecordFile extends File{
     
     public boolean updateRecordByTag(byte Tag, byte[] record)
     {
+    	byte[] rec = null;
+    	
         for (short i=0; i<records.length; i++)
         {
-            byte[] rec = (byte[]) records[i];
+            rec = (byte[]) records[i];
+            
             if (rec != null)
             {
             

@@ -46,7 +46,7 @@ public class Changsha {
    
     boolean personalEnd;
     
-    byte keyId = (byte)0x10;
+   
     
    
     MyRandom myRandom;
@@ -750,57 +750,66 @@ public class Changsha {
 
     public void writeBinary(MyAPDU apdu) throws ISOException
     {
+    	if (apdu.cla != (byte)0x04)
+        {
+        	ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        	
+        }
+    	
         //0x7F=0111 1111
         //     100X XXXX
         byte sfi = (byte) (apdu.p1 & 0x7F);
+        byte[] key = null;
         
-       
-        if (apdu.cla == (byte)0x04)
-        {
-        	//if (!apdu.unwrap(keyId))
-        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
-        }
-        
-        
+      
         BinaryFile file = null;
+        
+        //#文件更新密钥1 -密钥接口获取 DCMK01 02-01  用于更新sfi=15\16
+        //#文件更新密钥2 -密钥接口获取 DCMK02 03-06  用于更新sfi=17\11\12
         
         if (sfi == issue.getSFI())
         {
         	file = (BinaryFile) issue;
+        	key = MFDCMK.getKey();
         }
-        else if(sfi == app.getSFI())
+        else if(sfi == app.getSFI())//0x15
         {
+        	
         	file = (BinaryFile) app;
+        	key = ADFDCMK01.getKey();
         }
-        else if(sfi == personal.getSFI())
+        else if(sfi == personal.getSFI())//0x16
         {
         	file = (BinaryFile) personal;
+        	key = ADFDCMK01.getKey();
         }
-        else if(sfi == helper.getSFI())
+        else if(sfi == helper.getSFI())//0x11
         {
         	file = (BinaryFile) helper;
+        	key = ADFDCMK02.getKey();
         }
-        else if(sfi == reserved.getSFI())
+        else if(sfi == reserved.getSFI())//0x12
         {
         	file = (BinaryFile) reserved;
+        	key = ADFDCMK02.getKey();
         }
         else
         {
-        	file = null;
+        	ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
         }
         
         
-        if (file != null)
-        {
+     
+        	  
+            if (!apdu.unwrap(key))
+          		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        	
             byte[] data = new byte[apdu.lc];
             Util.arrayCopyNonAtomic(apdu.buffer, (short)0, data, (short)0, apdu.lc);
             
             file.setData(data);
-        }
-        else
-        {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
-        }
+            
+            apdu.le = 0;
     }
     
 
@@ -888,7 +897,11 @@ public class Changsha {
 
     public void updateRecord(MyAPDU apdu) throws ISOException
     {
-       
+    	if (apdu.cla != (byte)0x04)
+        {
+        	ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        	
+        }
         
         byte recordId = 0;
         byte tag = 0;
@@ -896,14 +909,6 @@ public class Changsha {
         //sfi
         //XXXX X000 //tag
         //XXXX X100 //id
-        
-        if (apdu.cla == (byte)0x04)
-        {
-        	//if (!apdu.unwrap(keyId))
-        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
-        }
-       
-        
         byte t = (byte)(apdu.p2 << 5);
         if (t == (byte)0x00) //0000 0000
         {
@@ -919,50 +924,47 @@ public class Changsha {
          
         byte sfi = (byte)((apdu.p2 & 0xF8) >> 3);
         
-       byte[] record = new byte[apdu.lc];
-       Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, apdu.lc);
+      
         
         
        RecordFile file = null;
        
-       if (sfi == logLocalPurchase.getSFI())
+       
+       if(sfi == cappPurchase.getSFI())
        {
-       	file = (RecordFile) logLocalPurchase;
-       }
-       else if(sfi == logCharge.getSFI())
-       {
-       	file = (RecordFile) logCharge;
-       }
-       else if(sfi == logRemotePurchase.getSFI())
-       {
-       	file = (RecordFile) logRemotePurchase;
-       }
-       else if(sfi == cappPurchase.getSFI())
-       {
-       	file = (RecordFile) cappPurchase;
+    	   file = (RecordFile) cappPurchase;
        }
        else
        {
-       	ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+    	   ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
        }
        
-            if (file != null)
-            {
-                if (t == (byte)0x00)
-                {
-                    if (!file.updateRecordByTag(tag, record))
-                        ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
-                }
-                else
-                {
-                    if (!file.updateRecordById(recordId, record))
-                        ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
-                }
-            }
+       
+       	if (!apdu.unwrap(ADFDCMK02.getKey())) //0x17
+       		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+       
+       
+       byte[] record = new byte[apdu.lc];
+       Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, apdu.lc);
+           
+       if (t == (byte)0x00)
+       {
+       		if (!file.updateRecordByTag(tag, record))
+            	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+       }
+       else
+       {
+    	   if (!file.updateRecordById(recordId, record))
+    		   ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+       }  
+       
+       apdu.le = 0;
     }
-    
+    /*
     public void appendRecord(MyAPDU apdu) throws ISOException
     {
+    	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+    	
         byte recordId = 0;
         byte tag = 0;
         
@@ -1030,7 +1032,7 @@ public class Changsha {
         }            
     }
     
-    
+    */
 
     
     
