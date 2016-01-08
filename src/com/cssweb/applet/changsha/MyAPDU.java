@@ -58,7 +58,7 @@ public class MyAPDU {
                 
             case INS.INIT_PURCHASE_CHARGE:
             case INS.PURCHASE:
-            case INS.CHARGE:
+            case INS.LOAD:
             
             case INS.WRITE_UID:
             case INS.EXTERNAL_AUTH:

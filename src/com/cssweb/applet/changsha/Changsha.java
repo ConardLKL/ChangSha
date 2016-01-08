@@ -18,13 +18,15 @@ import javacard.security.RandomData;
  * @author chenh
  */
 public class Changsha {
+   
+    static final byte TRADE_TYPE_LOAD = (byte)0x02;
     static final byte TRADE_TYPE_PURCHASE = (byte)0x06;
-    static final byte TRADE_TYPE_CHARGE = (byte)0x02;
     static final byte TRADE_TYPE_CAPP_PURCHASE = (byte)0x09;
     
     
     short purchaseTradeId = 0;
     short chargeTradeId = 0;
+    byte purchaseType;
     byte[] money = new byte[4];
     byte[] terminalId = new byte[6]; 
     byte[] purchaseKey = null;
@@ -190,8 +192,10 @@ public class Changsha {
     }
     
 
-    public void chargeInit(MyAPDU apdu) throws ISOException
+    public void loadInit(MyAPDU apdu) throws ISOException
     {
+    	//80 50 00 02 0B
+    	
     	if (apdu.p1 != (byte)0x00)
     		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
     	
@@ -229,7 +233,7 @@ public class Changsha {
         byte[] baBalance = balance.toBytes();
         Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
         Util.arrayCopy(money, (short)0, temp, (short)4, (short)4);
-        temp[8] = TRADE_TYPE_CHARGE;
+        temp[8] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, temp, (short)9, (short)6);
         ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)15, MAC1);
         
@@ -245,8 +249,10 @@ public class Changsha {
         apdu.le = 16;
     }
    
-    public void charge(MyAPDU apdu) throws ISOException
+    public void load(MyAPDU apdu) throws ISOException
     {
+    	// 80 52 00 00 0B
+    	
         byte[] buffer = apdu.getBuffer();
         
         // buffer = CLA INS P1 P2 LC ternimalDate4 ternimalTime3 MAC(2)4
@@ -259,7 +265,7 @@ public class Changsha {
         
         // GET MAC2 = money4 tradeType1 ternimalId6 terminalDatetime7
         Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
-        temp[4] = TRADE_TYPE_CHARGE;
+        temp[4] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)11, (short)7);
         
@@ -278,7 +284,7 @@ public class Changsha {
         byte[] log = new byte[23];
         Util.setShort(log, (short)0, chargeTradeId);
         Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
-        log[9] = TRADE_TYPE_CHARGE;
+        log[9] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, log, (short)16, (short)7);
         
@@ -294,7 +300,7 @@ public class Changsha {
         Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
         Util.setShort(temp, (short)4, chargeTradeId);
         Util.arrayCopy(money, (short)0, temp, (short)6, (short)4);
-        temp[10] = TRADE_TYPE_CHARGE;
+        temp[10] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, temp, (short)11, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)17, (short)7);
         
@@ -322,15 +328,33 @@ public class Changsha {
     {
         byte[] buffer = apdu.getBuffer();
         
+      //01普通消费
+        //80 50 01 02 0B
+        //03复合消费
+        //80 50 03 02 0B
+        
+        purchaseType = apdu.p1;
+        
+        
         //buffer = CLA INS P1 P2 LC keyIndex1 money4 terminalId6
         // get key index
         byte keyId = buffer[0];
-        
+        //根据keyId来决定是用DPK, 还是DPK01, DPK02...
         purchaseKey = DPK.getKey();
         
+        
+        //begin money is 0
+        //end money is actual money
+
+       
+       
+
+        
+     
         // get purchase money
         byte[] temp = new byte[4];
         Util.arrayCopy(buffer, (short)1, temp, (short)0, (short)4);
+     // is allow overflow???
         if (balance.subtract(temp, (byte)0) != 0)
         {
             ISOException.throwIt(ISO7816.SW_WRONG_DATA);
@@ -339,19 +363,23 @@ public class Changsha {
         {
             money = temp;
         }
+        
         // get terminal number
         Util.arrayCopy(buffer, (short)5, terminalId, (short)0, (short)6);
         //end
         
         
         
+
         // return buffer = balance4 purchaseTradeId2 keyVersion1 algId1 random4
+        //pboc response buffer balance4 purchaseTradeId2 overdrawLimit3 keyVersion1 algId1 random4
         // set balance
         byte[] baBalance = balance.toBytes();
         Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
         Util.setShort(buffer, (short)4, purchaseTradeId);
         buffer[6] = DPK.getKeyVersion();
         buffer[7] = DPK.getAlgId();
+        
         myRandom.genRandom();
         random = myRandom.getRandom();
         Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
@@ -359,10 +387,13 @@ public class Changsha {
     }
     
    
-    
+
+ 
    
     public void purchase(MyAPDU apdu) throws ISOException
     {
+    	//80 54 01 00 0F
+    	
         byte[] buffer = apdu.getBuffer();
         
         
@@ -458,77 +489,6 @@ public class Changsha {
     }
     
     
-    
-    
-    public void cappPurchaseInit(MyAPDU apdu) throws ISOException
-    {
-        byte[] buffer = apdu.getBuffer();
-        
-        // 80 50 03 02 0B keyIndex1 money4 ternimalId6
-        //begin money is 0
-        //end money is actual money
-
-        // get key index
-        byte keyId = buffer[0];
-        
-        purchaseKey = DPK.getKey();
-        Util.arrayCopy(buffer, (short)1, money, (short)0, (short)4);
-        Util.arrayCopy(buffer, (short)5, terminalId, (short)0, (short)6);
-
-        // is allow overflow???
-        if (balance.subtract(money, (byte)0) != 0 )
-        {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        }
-      
-        
-        // return buffer = balance4 purchaseTradeId2 keyVersion1 algId1 random4
-        //pboc response buffer balance4 purchaseTradeId2 overdrawLimit3 keyVersion1 algId1 random4
-        // set balance
-        byte[] baBalance = balance.toBytes();
-        Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
-        
-        
-        //set purchase trade num
-        Util.setShort(buffer, (short)4, purchaseTradeId);
-        
-        // get keyVersion, algId by keyIndex
-        // set key version
-        buffer[6] = DPK.getKeyVersion();
-        // set alg type
-        buffer[7] = DPK.getAlgId();
-        
-        // set random
-        myRandom.genRandom();
-        random = myRandom.getRandom();
-        Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
-
-        apdu.le = 12;
-    }
-    
- 
-    public void cappPurchaseUpdate(MyAPDU apdu) throws ISOException
-    {
-        byte[] buffer = apdu.getBuffer();
-         
-        //begin tradeStatus set not 00
-        //end tradeStatus set 00
-        
-
-        byte tag = apdu.p1;
-
-        
-        byte sfi = (byte)((apdu.p2 & 0xFF) >> 3);
-        
-        if (sfi != 0x17)
-             ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
-            
-        byte[] data = new byte[48];
-        Util.arrayCopy(buffer, (short)0, data, (short)0, (short)48);
-        
-        cappPurchaseRecord = data;
-        apdu.le = 0;
-    }
     
   
     public void cappPurchase(MyAPDU apdu) throws ISOException
@@ -895,6 +855,7 @@ public class Changsha {
             }
     }
 
+    //04DC
     public void updateRecord(MyAPDU apdu) throws ISOException
     {
     	if (apdu.cla != (byte)0x04)
@@ -944,9 +905,18 @@ public class Changsha {
        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
        
        
-       byte[] record = new byte[apdu.lc];
-       Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, apdu.lc);
-           
+       
+       
+       short len = apdu.lc;
+     //如果是轨道交通记录，去掉后面CRC
+       if (recordId == (byte)0x02 || tag == (byte)0x02)
+       {
+    	   len = (short) (apdu.lc - 2);
+       }
+       byte[] record = new byte[len];
+       Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, len);
+       
+       
        if (t == (byte)0x00)
        {
        		if (!file.updateRecordByTag(tag, record))
@@ -954,12 +924,44 @@ public class Changsha {
        }
        else
        {
+    	 
+        	   
     	   if (!file.updateRecordById(recordId, record))
     		   ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
        }  
        
        apdu.le = 0;
     }
+
+    //80DC
+    public void cappPurchaseUpdate(MyAPDU apdu) throws ISOException
+    {
+        byte[] buffer = apdu.getBuffer();
+         
+        //begin tradeStatus set not 00
+        //end tradeStatus set 00
+        
+
+        byte tag = apdu.p1;
+
+        
+        byte sfi = (byte)((apdu.p2 & 0xFF) >> 3);
+        
+        if (sfi != 0x17)
+             ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        
+        //是否去掉后面的CRC
+      //0x30=48
+        //0x2E=46
+        byte[] data = new byte[46];
+        Util.arrayCopy(buffer, (short)0, data, (short)0, (short)46);
+        
+        cappPurchaseRecord = data;
+        
+        apdu.le = 0;
+    }
+    
+    
     /*
     public void appendRecord(MyAPDU apdu) throws ISOException
     {

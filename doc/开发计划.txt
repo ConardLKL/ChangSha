@@ -1,29 +1,3 @@
-writekey
-cardControl， transKey
-#卡片维护子密钥cardManage，cardControl
-# update card manage key， cardControl
-
-发行基本信息文件， cardManage
-
-appControl， cardControl
-appManage 应用维护子密钥1，appControl
-FileManage1， appControl
-FileManage2， appControl
-appManage 复合消费维护密钥，appControl
-purchase1， appControl
-load1， appControl
-load2， appControl
-tac，appControl
-upload， appControl
-修改透支， 使用appcontrol
-
-
-公共应用基本数据文件, FM1
-辅助信息文件，采用FM2
-写应用控制记录，采用FM2密钥
-applock使用applock密钥
-appunlock使用appunlock密钥
-
 
 
 packageid A00000000386980702

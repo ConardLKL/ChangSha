@@ -38,7 +38,7 @@ public class INS {
     public static final byte GET_BALANCE = (byte)0x5C;
     public static final byte INIT_PURCHASE_CHARGE = (byte)0x50;
     public static final byte PURCHASE = (byte)0x54;
-    public static final byte CHARGE = (byte)0x52;
+    public static final byte LOAD = (byte)0x52;
    
    
    // public static final  byte CAPP_PURCHASE = (byte)0x54;

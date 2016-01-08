@@ -170,7 +170,7 @@ public class Main extends Applet {
             {
                 if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x00)
                 {
-                	changsha.chargeInit(apduin);
+                	changsha.loadInit(apduin);
                 }
                 else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x01)
                 {
@@ -183,8 +183,8 @@ public class Main extends Applet {
                     
                 break;
             }
-            case INS.CHARGE:
-                changsha.charge(apduin);
+            case INS.LOAD:
+                changsha.load(apduin);
                 break;
             case INS.PURCHASE:
                 changsha.purchase(apduin);
