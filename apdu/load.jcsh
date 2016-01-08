@@ -24,4 +24,5 @@
 #0xD4=1101 0100 p1=recordId=0x00
 /send 00B201D40017
 
-
+#/send 00B201D417
+#/send 00B202D417

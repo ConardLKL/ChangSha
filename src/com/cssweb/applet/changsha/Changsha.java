@@ -398,10 +398,10 @@ public class Changsha {
         
         
         //buffer = CLA INS P1 P2 LC ternimalTradeId4 terminalDate4 terminalTime3 MAC(1)4
-        byte[] ternimalTradeId = new byte[4];
-        Util.arrayCopy(buffer, (short)0, ternimalTradeId, (short)0, (short)4);
-        byte[] ternimalDatetime = new byte[7];
-        Util.arrayCopy(buffer, (short)4, ternimalDatetime, (short)0, (short)7);
+        byte[] terminalTradeId = new byte[4];
+        Util.arrayCopy(buffer, (short)0, terminalTradeId, (short)0, (short)4);
+        byte[] terminalDatetime = new byte[7];
+        Util.arrayCopy(buffer, (short)4, terminalDatetime, (short)0, (short)7);
         byte[] mac1 = new byte[4];
         Util.arrayCopy(buffer, (short)11, mac1, (short)0, (short)4);
         
@@ -411,22 +411,27 @@ public class Changsha {
         Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
         Util.setShort(temp, (short)4, purchaseTradeId);
         // ternimalTradeId right 2byte???
-        Util.arrayCopy(ternimalTradeId, (short)2, temp, (short)6, (short)2); 
+        Util.arrayCopy(terminalTradeId, (short)2, temp, (short)6, (short)2); 
         
         ALG.genSessionKey(purchaseKey, temp, (short)8, purchaseSessionKey);//return 32 bytes
         // end
         
         
         
-        // gen MAC1
-        //temp = money4 tradeType1 ternimalId6 terminalDate4 ternimalTime3
+     // gen MAC1
+        //temp = money4 tradeType1 ternimalId6 terminalDate4 ternimalTime3 UID
         Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
-        temp[4] = TRADE_TYPE_PURCHASE;
+        
+        if (purchaseType == TRADE_TYPE_PURCHASE)
+        	temp[4] = TRADE_TYPE_PURCHASE;
+        if (purchaseType == TRADE_TYPE_CAPP_PURCHASE)
+        	temp[4] = TRADE_TYPE_CAPP_PURCHASE;
+        
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
-        Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
+        Util.arrayCopy(terminalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
+        Util.arrayCopy(UID, (short)0, temp, (short)18, (short)UID.length);//用户卡安全认证识别码
         
-        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)18, MAC1);
-        
+        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)27, MAC1);
         if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
         {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
@@ -463,6 +468,45 @@ public class Changsha {
         
         
         //
+
+        if (cappPurchaseRecord == null)
+            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+        
+        if (cappPurchaseRecord[4] == (byte)0x00)
+        {
+            JCSystem.beginTransaction();
+            //step 1
+            balance.subtract(money, (byte)1);
+            
+            //step 2
+            purchaseTradeId++;
+
+            //step 3
+            // update capp record
+            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+           
+            
+            //step 4
+            byte[] log = new byte[23];
+            Util.setShort(log, (short)0, purchaseTradeId);
+            Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
+            log[9] = TRADE_TYPE_CAPP_PURCHASE;
+            Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
+            Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
+            
+            ((RecordFileCycler)logLocalPurchase).addRecord(log);
+           
+            JCSystem.commitTransaction();
+        }
+        else
+        {
+            // status isn't 0x00 
+            //save to file
+           
+            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+        }
+        
+        
         JCSystem.beginTransaction();
         balance.subtract(money, (byte)1);
         purchaseTradeId++;
@@ -472,7 +516,7 @@ public class Changsha {
         Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
         log[9] = TRADE_TYPE_PURCHASE;
         Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
-        Util.arrayCopy(ternimalDatetime, (short)0, log, (short)16, (short)7);
+        Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
         
         ((RecordFileCycler)logLocalPurchase).addRecord(log);
         
