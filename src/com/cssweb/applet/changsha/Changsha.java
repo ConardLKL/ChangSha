@@ -507,10 +507,18 @@ public class Changsha {
         	if (cappPurchaseRecord == null)
                 ISOException.throwIt(ISO7816.SW_WRONG_DATA);
             
-        	//判断条件是什么
-            if (cappPurchaseRecord[4] == (byte)0x00)
+        	
+            if (isEntrance())
             {
-                JCSystem.beginTransaction();
+            	//进站
+               
+                ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+            }
+            else
+            {
+            	//出站
+            	
+            	JCSystem.beginTransaction();
                 //step 1
                 balance.subtract(money, (byte)1);
                 
@@ -535,13 +543,6 @@ public class Changsha {
                
                 JCSystem.commitTransaction();
             }
-            else
-            {
-                // status isn't 0x00 
-                //save to file
-               
-                ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
-            }
         }
         
         // return buffer = TAC4 MAC(2)4
@@ -551,6 +552,20 @@ public class Changsha {
         apdu.le = 8;
     }
     
+    public boolean isEntrance()
+    {
+    	boolean ret = false;
+    	
+    	byte[] zero = new byte[4];
+    	Util.arrayFillNonAtomic(zero, (short)0, (short)zero.length, (byte)0x00);
+    	
+    	if (Util.arrayCompare(money, (short)0, zero, (short)0, (short)4) == 0)
+    	{
+    		ret = true;
+    	}
+    	
+    	return ret;
+    }
     
     
   

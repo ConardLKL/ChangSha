@@ -172,7 +172,7 @@ public class Main extends Applet {
                 {
                 	changsha.loadInit(apduin);
                 }
-                else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x01)
+                else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x01 || apduBuffer[ISO7816.OFFSET_P1] == (byte)0x03)
                 {
                 	changsha.purchaseInit(apduin);
                 }
