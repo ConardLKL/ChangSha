@@ -18,7 +18,7 @@ import javacard.security.RandomData;
  * @author chenh
  */
 public class Changsha {
-   
+	byte purchaseType;
     static final byte TRADE_TYPE_LOAD = (byte)0x02;
     static final byte TRADE_TYPE_PURCHASE = (byte)0x06;
     static final byte TRADE_TYPE_CAPP_PURCHASE = (byte)0x09;
@@ -26,8 +26,9 @@ public class Changsha {
     
     short purchaseTradeId = 0;
     short chargeTradeId = 0;
-    byte purchaseType;
+    
     byte[] money = new byte[4];
+    byte[] limit = new byte[3]; // 透支限额
     byte[] terminalId = new byte[6]; 
     byte[] purchaseKey = null;
     
@@ -209,10 +210,9 @@ public class Changsha {
         // get key index
         byte keyId = buffer[0];
         
-        
-        
         // get purchase money
         Util.arrayCopy(buffer, (short)1, money, (short)0, (short)4); 
+        
         // get terminal id
         Util.arrayCopy(buffer, (short)5, terminalId, (short)0, (short)6);
         //end
@@ -230,11 +230,15 @@ public class Changsha {
         
         // gen MAC1
         // balance4 money4 tradeType1 ternimalId6
+        Util.arrayFillNonAtomic(iv, (short)0, (short)iv.length, (byte)0x00);
+        
         byte[] baBalance = balance.toBytes();
         Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
         Util.arrayCopy(money, (short)0, temp, (short)4, (short)4);
         temp[8] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, temp, (short)9, (short)6);
+        
+        
         ALG.genMACOrTAC(chargeSessionKey, iv, temp, (byte)15, MAC1);
         
         
@@ -264,6 +268,8 @@ public class Changsha {
         
         
         // GET MAC2 = money4 tradeType1 ternimalId6 terminalDatetime7
+        Util.arrayFillNonAtomic(iv, (short)0, (short)iv.length, (byte)0x00);
+        
         Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
         temp[4] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
@@ -277,12 +283,15 @@ public class Changsha {
         }
         
         
+        short loadId = chargeTradeId;
         JCSystem.beginTransaction();
+        
         balance.add(money, (byte)1);
         chargeTradeId++;
         
         byte[] log = new byte[23];
         Util.setShort(log, (short)0, chargeTradeId);
+        //保留数据3字节
         Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
         log[9] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
@@ -298,25 +307,23 @@ public class Changsha {
         // balance4 chargeTradeId2 money4 tradeType1 ternimalId6 terminalDatetime7
         byte[] baBalance = balance.toBytes();
         Util.arrayCopy(baBalance, (short)0, temp, (short)0, (short)4);
-        Util.setShort(temp, (short)4, chargeTradeId);
+        Util.setShort(temp, (short)4, loadId); // 注意是+1前的交易序号
         Util.arrayCopy(money, (short)0, temp, (short)6, (short)4);
         temp[10] = TRADE_TYPE_LOAD;
         Util.arrayCopy(terminalId, (short)0, temp, (short)11, (short)6);
         Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)17, (short)7);
         
+        
         byte[] left = new byte[8];
         byte[] right = new byte[8];
         
-        
-        
         byte[] TACKey = DTK.getKey();
-        
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
+        
         byte[] tacKey = ALG.bytesXOR(left, right);
         
-        
-        
+        Util.arrayFillNonAtomic(iv, (short)0, (short)iv.length, (byte)0x00);
         ALG.genMACOrTAC(tacKey, iv, temp, (byte)24, TAC);
         
         
@@ -334,6 +341,8 @@ public class Changsha {
         //80 50 03 02 0B
         
         purchaseType = apdu.p1;
+        if (purchaseType != (byte)0x01 && purchaseType != (byte)0x03)
+        	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
         
         
         //buffer = CLA INS P1 P2 LC keyIndex1 money4 terminalId6
@@ -345,11 +354,6 @@ public class Changsha {
         
         //begin money is 0
         //end money is actual money
-
-       
-       
-
-        
      
         // get purchase money
         byte[] temp = new byte[4];
@@ -376,14 +380,19 @@ public class Changsha {
         // set balance
         byte[] baBalance = balance.toBytes();
         Util.arrayCopy(baBalance, (short)0, buffer, (short)0, (short)4);
+        
         Util.setShort(buffer, (short)4, purchaseTradeId);
-        buffer[6] = DPK.getKeyVersion();
-        buffer[7] = DPK.getAlgId();
+        
+        Util.arrayCopy(limit, (short)0, buffer, (short)6, (short)3);//透支限额
+        
+        buffer[9] = DPK.getKeyVersion();
+        buffer[10] = DPK.getAlgId();
         
         myRandom.genRandom();
         random = myRandom.getRandom();
-        Util.arrayCopy(random, (short)0, buffer, (short)8, (short)4);
-        apdu.le = 12;
+        Util.arrayCopy(random, (short)0, buffer, (short)11, (short)4);
+        
+        apdu.le = 15;
     }
     
    
@@ -400,8 +409,10 @@ public class Changsha {
         //buffer = CLA INS P1 P2 LC ternimalTradeId4 terminalDate4 terminalTime3 MAC(1)4
         byte[] terminalTradeId = new byte[4];
         Util.arrayCopy(buffer, (short)0, terminalTradeId, (short)0, (short)4);
+        
         byte[] terminalDatetime = new byte[7];
         Util.arrayCopy(buffer, (short)4, terminalDatetime, (short)0, (short)7);
+        
         byte[] mac1 = new byte[4];
         Util.arrayCopy(buffer, (short)11, mac1, (short)0, (short)4);
         
@@ -410,7 +421,8 @@ public class Changsha {
         //temp = random4 purchaseTradeId2 ternimalTradeId(right 2)
         Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
         Util.setShort(temp, (short)4, purchaseTradeId);
-        // ternimalTradeId right 2byte???
+        // #计算会话密钥
+        //DESInputData = Random + ETTJJYXH + POS_SN[-4:]
         Util.arrayCopy(terminalTradeId, (short)2, temp, (short)6, (short)2); 
         
         ALG.genSessionKey(purchaseKey, temp, (short)8, purchaseSessionKey);//return 32 bytes
@@ -422,16 +434,20 @@ public class Changsha {
         //temp = money4 tradeType1 ternimalId6 terminalDate4 ternimalTime3 UID
         Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
         
-        if (purchaseType == TRADE_TYPE_PURCHASE)
+        if (purchaseType == (byte)0x01)
         	temp[4] = TRADE_TYPE_PURCHASE;
-        if (purchaseType == TRADE_TYPE_CAPP_PURCHASE)
+        
+        if (purchaseType == (byte)0x03)
         	temp[4] = TRADE_TYPE_CAPP_PURCHASE;
         
         Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
         Util.arrayCopy(terminalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
         Util.arrayCopy(UID, (short)0, temp, (short)18, (short)UID.length);//用户卡安全认证识别码
         
+        Util.arrayFillNonAtomic(iv, (short)0, (short)iv.length, (byte)0x00);
+        
         ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)27, MAC1);
+        
         if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
         {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
@@ -440,18 +456,19 @@ public class Changsha {
         
         
         
+      //gen MAC2
+        ALG.genMACOrTAC(purchaseSessionKey, iv, money, (byte)4, MAC2);
+        //end
+        
         //gen TAC
-        //buffer = CLA INS P1 P2 LC ternimalTradeId4 terminalDate4 terminalTime3 MAC(1)4
+        //buffer = ternimalTradeId4 terminalDate4 terminalTime3 MAC(1)4
         //temp copy before money4 tradeType1 ternimalId6 ternimalDatetime7
         //temp copy after  money4 tradeType1 ternimalId6 (ternimalTradeId4 terminalDate4 terminalTime3)
         Util.arrayCopy(buffer, (short)0, temp, (short)11, (short)11);
         
         byte[] left = new byte[8];
         byte[] right = new byte[8];
-        
-       
         byte[] TACKey = DTK.getKey();
-        
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
         byte[] tacKey = ALG.bytesXOR(left, right);
@@ -461,69 +478,71 @@ public class Changsha {
         
         
         
-        //gen MAC2
-        ALG.genMACOrTAC(purchaseSessionKey, iv, money, (byte)4, MAC2);
-        //end
         
         
         
-        //
-
-        if (cappPurchaseRecord == null)
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
         
-        if (cappPurchaseRecord[4] == (byte)0x00)
+        if (purchaseType == (byte)0x01)
         {
-            JCSystem.beginTransaction();
-            //step 1
-            balance.subtract(money, (byte)1);
+        	JCSystem.beginTransaction();
             
-            //step 2
-            purchaseTradeId++;
+		        balance.subtract(money, (byte)1);
+		        purchaseTradeId++;
+		
+		        byte[] log = new byte[23];
+		        Util.setShort(log, (short)0, purchaseTradeId);
+		        //保留数据3字节
+		        Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
+		        log[9] = TRADE_TYPE_PURCHASE;
+		        Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
+		        Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
+	        
+	        ((RecordFileCycler)logLocalPurchase).addRecord(log);
+        
 
-            //step 3
-            // update capp record
-            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
-           
-            
-            //step 4
-            byte[] log = new byte[23];
-            Util.setShort(log, (short)0, purchaseTradeId);
-            Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
-            log[9] = TRADE_TYPE_CAPP_PURCHASE;
-            Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
-            Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
-            
-            ((RecordFileCycler)logLocalPurchase).addRecord(log);
-           
-            JCSystem.commitTransaction();
+	        JCSystem.commitTransaction();
         }
         else
         {
-            // status isn't 0x00 
-            //save to file
-           
-            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+        	if (cappPurchaseRecord == null)
+                ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+            
+        	//判断条件是什么
+            if (cappPurchaseRecord[4] == (byte)0x00)
+            {
+                JCSystem.beginTransaction();
+                //step 1
+                balance.subtract(money, (byte)1);
+                
+                //step 2
+                purchaseTradeId++;
+
+                //step 3
+                // update capp record
+                ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+               
+                
+                //step 4
+                byte[] log = new byte[23];
+                Util.setShort(log, (short)0, purchaseTradeId);
+                //保留数据3字节
+                Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
+                log[9] = TRADE_TYPE_CAPP_PURCHASE;
+                Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
+                Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
+                
+                ((RecordFileCycler)logLocalPurchase).addRecord(log);
+               
+                JCSystem.commitTransaction();
+            }
+            else
+            {
+                // status isn't 0x00 
+                //save to file
+               
+                ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
+            }
         }
-        
-        
-        JCSystem.beginTransaction();
-        balance.subtract(money, (byte)1);
-        purchaseTradeId++;
-
-        byte[] log = new byte[23];
-        Util.setShort(log, (short)0, purchaseTradeId);
-        Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
-        log[9] = TRADE_TYPE_PURCHASE;
-        Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
-        Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
-        
-        ((RecordFileCycler)logLocalPurchase).addRecord(log);
-        
-
-        JCSystem.commitTransaction();
-        
-        
         
         // return buffer = TAC4 MAC(2)4
         Util.arrayCopy(TAC, (short)0, buffer, (short)0, (short)4);
@@ -535,117 +554,6 @@ public class Changsha {
     
     
   
-    public void cappPurchase(MyAPDU apdu) throws ISOException
-    {
-        byte[] buffer = apdu.getBuffer();
-        // 80 54 01 00 0f 
-        //buffer = CLA INS P1 P2 LC ternimalTradeId4 terminalDate4 terminalTime3 MAC(1)4
-        byte[] ternimalTradeId = new byte[4];
-        Util.arrayCopy(buffer, (short)0, ternimalTradeId, (short)0, (short)4);
-        byte[] terminalDatetime = new byte[7];
-        Util.arrayCopy(buffer, (short)4, terminalDatetime, (short)0, (short)7);
-        byte[] mac1 = new byte[4];
-        Util.arrayCopy(buffer, (short)11, mac1, (short)0, (short)4);
-        
-        
-        // gen session key
-        //temp = random4 purchaseTradeId2 ternimalTradeId(right 2)
-        Util.arrayCopy(random, (short)0, temp, (short)0, (short)4);
-        Util.setShort(temp, (short)4, purchaseTradeId);
-        // ternimalTradeId right 2byte???
-        Util.arrayCopy(ternimalTradeId, (short)2, temp, (short)6, (short)2); 
-        
-        ALG.genSessionKey(purchaseKey, temp, (short)8, purchaseSessionKey);
-        // end
-        
-        
-        
-        // gen MAC1
-        //temp = money4 tradeType1 ternimalId6 terminalDate4 ternimalTime3 UID
-        Util.arrayCopy(money, (short)0, temp, (short)0, (short)4);
-        temp[4] = TRADE_TYPE_CAPP_PURCHASE;
-        Util.arrayCopy(terminalId, (short)0, temp, (short)5, (short)6);
-        Util.arrayCopy(terminalDatetime, (short)0, temp, (short)11, (short)7); // terminalDate terminlaTime
-        Util.arrayCopy(UID, (short)0, temp, (short)18, (short)UID.length);//用户卡安全认证识别码
-        
-        ALG.genMACOrTAC(purchaseSessionKey, iv, temp, (byte)27, MAC1);
-        if (Util.arrayCompare(MAC1, (short)0, mac1, (short)0, (short)4) != 0)
-        {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
-        }
-        //end
-        
-       
-        //gen TAC
-        //buffer = CLA INS P1 P2 LC ternimalTradeId4 terminalDate4 terminalTime3 MAC(1)4
-        //temp copy before money4 tradeType1 ternimalId6 ternimalDatetime7
-        //temp copy after  money4 tradeType1 ternimalId6 (ternimalTradeId4 terminalDate4 terminalTime3)
-        Util.arrayCopy(buffer, (short)0, temp, (short)11, (short)11);
-        
-        byte[] left = new byte[8];
-        byte[] right = new byte[8];
-        
-        byte[] TACKey = DTK.getKey();
-        Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
-        Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
-        byte[] tacKey = ALG.bytesXOR(left, right);
-        
-        ALG.genMACOrTAC(tacKey, iv, temp, (byte)22, TAC);
-        //end
-        
-        //gen MAC2
-        // begin money is 0
-        // end money is actual money
-        ALG.genMACOrTAC(purchaseSessionKey, iv, money, (byte)4, MAC2);
-        //end
-        
-        
-        if (cappPurchaseRecord == null)
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
-        
-        if (cappPurchaseRecord[4] == (byte)0x00)
-        {
-            JCSystem.beginTransaction();
-            //step 1
-            balance.subtract(money, (byte)1);
-            
-            //step 2
-            purchaseTradeId++;
-
-            //step 3
-            // update capp record
-            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
-           
-            
-            //step 4
-            byte[] log = new byte[23];
-            Util.setShort(log, (short)0, purchaseTradeId);
-            Util.arrayCopy(money, (short)0, log, (short)5, (short)4);
-            log[9] = TRADE_TYPE_CAPP_PURCHASE;
-            Util.arrayCopy(terminalId, (short)0, log, (short)10, (short)6);
-            Util.arrayCopy(terminalDatetime, (short)0, log, (short)16, (short)7);
-            
-            ((RecordFileCycler)logLocalPurchase).addRecord(log);
-           
-            JCSystem.commitTransaction();
-        }
-        else
-        {
-            // status isn't 0x00 
-            //save to file
-           
-            ((RecordFile)cappPurchase).updateRecordByTag(cappPurchaseRecord[0], cappPurchaseRecord);
-        }
-        
-        
-        
-        
-        // return buffer = TAC4 MAC(2)4
-        Util.arrayCopy(TAC, (short)0, buffer, (short)0, (short)4);
-        Util.arrayCopy(MAC2, (short)0, buffer, (short)4, (short)4);
-        apdu.le = 8;
-    }
-    
 
     public void writeUID(MyAPDU apdu) throws ISOException
     {
@@ -997,10 +905,17 @@ public class Changsha {
         //是否去掉后面的CRC
       //0x30=48
         //0x2E=46
-        byte[] data = new byte[46];
-        Util.arrayCopy(buffer, (short)0, data, (short)0, (short)46);
+        short len = apdu.lc;
+        //如果是轨道交通记录，去掉后面CRC
+          if (tag == (byte)0x02)
+          {
+       	   len = (short) (apdu.lc - 2);
+          }
+          
+          byte[] record = new byte[len];
+          Util.arrayCopy(apdu.buffer, (short)0, record, (short)0, len);
         
-        cappPurchaseRecord = data;
+        cappPurchaseRecord = record;
         
         apdu.le = 0;
     }
