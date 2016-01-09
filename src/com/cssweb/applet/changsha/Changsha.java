@@ -24,8 +24,8 @@ public class Changsha {
     static final byte TRADE_TYPE_CAPP_PURCHASE = (byte)0x09;
     
     
-    short purchaseTradeId = 0;
-    short chargeTradeId = 0;
+    short purchaseTradeId = 1;
+    short chargeTradeId = 1;
     
     byte[] money = new byte[4];
     byte[] limit = new byte[3]; // Í¸Ö§ÏÞ¶î
