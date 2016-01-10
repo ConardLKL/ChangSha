@@ -10,7 +10,7 @@ package com.cssweb.applet.changsha;
  * @author chenh
  */
 public class RecordFile extends File{
-    public static final short MAX_RECORD_NUM = (byte)0x20;
+    public static final short MAX_RECORD_NUM = (byte)0x0B;
     
     Object records[];
     short recordId;

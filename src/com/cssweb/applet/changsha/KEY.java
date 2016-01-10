@@ -30,21 +30,22 @@ public class KEY  {
         errorCount = k[3];//错误计数器
         safeStatus = k[4];//后续安全状态
         
-        key = new byte[16];
-        Util.arrayCopy(k, (short)5, key, (short)0, (short)16);
         
-        /*
-        if (keyId == (byte)0x08)
+        
+        
+        if (k.length == 24)
         {
-            key = new byte[6];
-            Util.arrayCopy(k, (short)4, key, (short)0, (short)6);
+        	key = new byte[16];
+            Util.arrayCopy(k, (short)5, key, (short)0, (short)16);
+            
         }
         else
         {
-            key = new byte[16];
-            Util.arrayCopy(k, (short)4, key, (short)0, (short)16);
+        	//PIN密码
+        	key = new byte[6];
+            Util.arrayCopy(k, (short)5, key, (short)0, (short)6);
         }
-        */
+        
     }
     
     public byte[] getKey()

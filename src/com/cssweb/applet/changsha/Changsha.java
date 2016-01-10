@@ -30,24 +30,28 @@ public class Changsha {
     byte[] money = new byte[4];
     byte[] limit = new byte[3]; // 透支限额
     byte[] terminalId = new byte[6]; 
-    byte[] purchaseKey = null;
+    byte[] ternimalDatetime = new byte[7];
     
     byte[] temp = JCSystem.makeTransientByteArray((short)32, JCSystem.CLEAR_ON_DESELECT);
-   
-    byte[] MAC2 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
-    byte[] TAC = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
-    byte[] MAC1 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
-    byte[] iv = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    
+    byte[] purchaseKey = null;
     byte[] purchaseSessionKey = JCSystem.makeTransientByteArray((short)16, JCSystem.CLEAR_ON_DESELECT);
     byte[] chargeSessionKey = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    byte[] left = new byte[8];
+    byte[] right = new byte[8];
+    
+    byte[] iv = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    byte[] MAC1 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    byte[] MAC2 = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    byte[] TAC = JCSystem.makeTransientByteArray((short)8, JCSystem.CLEAR_ON_DESELECT);
+    
     
    
- 
     
-    boolean appLock;
-    boolean appLockForEver;
+    
+    
    
-    boolean personalEnd;
+    
     
    
     
@@ -74,6 +78,7 @@ public class Changsha {
     //keyId keyVersion algId errorCount
     public static final byte[] TRANS_KEY = {(byte)0x14, (byte)0x01, (byte)0x00, (byte)0x33, (byte)0x00, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0x80, (byte)0x00, (byte)0x00};
     
+    byte[] key = {(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF};
     
     KEY MFDCCK, MFDCMK;
     KEY ADFDCCK, ADFDCMK, ADFDCMK01, ADFDCMK02, DPK, DLK, DTK, PIN, DABK, DAUK, DPUK, DPRK;
@@ -91,7 +96,8 @@ public class Changsha {
     public static final byte KEY_TAG_DLK = (byte)0x07; //充值密钥
     public static final byte KEY_TAG_DTK = (byte)0x08; //TAC密钥
     
-    //public static final byte KEY_TAG_PIN = (byte); //PIN密钥
+    public static final byte KEY_TAG_PIN = (byte)0x00; //PIN密钥， 临时，没有资料，需要修改
+    
     public static final byte KEY_TAG_DPUK = (byte)0x04;//PIN解锁密钥
     public static final byte KEY_TAG_DPRK = (byte)0x05;//PIN重装密钥
     
@@ -154,7 +160,6 @@ public class Changsha {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         
         
-        byte[] key = {(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF};
         
         byte[] in = new byte[8];
         //myRandom.genRandom();
@@ -260,7 +265,7 @@ public class Changsha {
         byte[] buffer = apdu.getBuffer();
         
         // buffer = CLA INS P1 P2 LC ternimalDate4 ternimalTime3 MAC(2)4
-        byte[] ternimalDatetime = new byte[7];
+        
         Util.arrayCopy(buffer, (short)0, ternimalDatetime, (short)0, (short)7);
         byte[] mac2 = new byte[4];
         Util.arrayCopy(buffer, (short)7, mac2, (short)0, (short)4);
@@ -314,8 +319,7 @@ public class Changsha {
         Util.arrayCopy(ternimalDatetime, (short)0, temp, (short)17, (short)7);
         
         
-        byte[] left = new byte[8];
-        byte[] right = new byte[8];
+        
         
         byte[] TACKey = DTK.getKey();
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
@@ -466,8 +470,7 @@ public class Changsha {
         //temp copy after  money4 tradeType1 ternimalId6 (ternimalTradeId4 terminalDate4 terminalTime3)
         Util.arrayCopy(buffer, (short)0, temp, (short)11, (short)11);
         
-        byte[] left = new byte[8];
-        byte[] right = new byte[8];
+        
         byte[] TACKey = DTK.getKey();
         Util.arrayCopy(TACKey, (short)0, left, (short)0, (short)8);
         Util.arrayCopy(TACKey, (short)8, right, (short)0, (short)8);
@@ -475,11 +478,6 @@ public class Changsha {
         
         ALG.genMACOrTAC(tacKey, iv, temp, (byte)22, TAC);
         //end
-        
-        
-        
-        
-        
         
         
         if (purchaseType == (byte)0x01)
@@ -611,11 +609,31 @@ public class Changsha {
         
     }
     
-    public void TranProof(MyAPDU apdu) throws ISOException
+    public void getTransactionProve(MyAPDU apdu) throws ISOException
     {
+    	////80 5A 00 交易类型标识  长度2 交易序号 
          byte[] buffer = apdu.getBuffer();
-        // buffer = 80 5A A1/A2 00 02 Data
-        // response buffer = MAC/TAC
+         
+         
+        if (apdu.cla != (byte)0x80)
+        	ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        
+        if (apdu.ins != (byte)0x5A)
+        	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        
+        if (apdu.p1 == TRADE_TYPE_LOAD || apdu.p1 == TRADE_TYPE_PURCHASE || apdu.p1 == TRADE_TYPE_CAPP_PURCHASE)
+        {
+        	short tradeId = apdu.p2;
+        	
+        	//return MAC or TAC
+        	
+        	apdu.le = 4;
+        }
+        else
+        {
+        	ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+        }
+        	
     }
     
 
@@ -1010,7 +1028,48 @@ public class Changsha {
     
     */
 
+    public void unblockPIN(MyAPDU apdu) throws ISOException
+    {
+    	
+    }
     
+    public void changePIN(MyAPDU apdu) throws ISOException
+    {
+    	
+    }
+    
+    public void reloadPIN(MyAPDU apdu) throws ISOException
+    {
+    	
+    }
+    
+
+    public void verifyPIN(MyAPDU apdu) throws ISOException
+    {
+    	if (apdu.cla != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    	
+    	if (apdu.ins != (byte)0x20)
+    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+    	
+    	if (apdu.p1 != (byte)0x00 && apdu.p2 != (byte)0x00)
+    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
+    	
+    	//需要实现verifypin 00 20 00 00 03 123456
+    	
+    	byte[] pin = {0x12, 0x34, 0x56};
+    	
+    	//需要把HEX转成BCD码
+    	
+    	byte[] buffer = apdu.getBuffer();
+    	
+    	if (Util.arrayCompare(buffer, (short)0, pin, (short)0, (short)3) != 0)
+    	{
+    		ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+    	}
+    	
+    	apdu.le = 0;
+    }
     
     public void cardBlock(MyAPDU apdu) throws ISOException
     {
@@ -1020,6 +1079,7 @@ public class Changsha {
         }
         else
         {
+        	//用哪个密钥解密？？？
         	//if (!apdu.unwrap(keyId))
         	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         }
@@ -1042,8 +1102,8 @@ public class Changsha {
         }
         else
         {
-        	//if (!apdu.unwrap(keyId))
-        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        	if (!apdu.unwrap(DABK.getKey()))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         }
         
         if (apdu.ins != (byte)0x1E)
@@ -1052,9 +1112,9 @@ public class Changsha {
         }
         
         if (apdu.p2 == (byte)0x00)
-            appLock = true;
+            Config.appLock = true;
         else if (apdu.p2 == (byte)0x01)
-            appLockForEver = true;
+            Config.appLockForEver = true;
         else
             ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
         
@@ -1069,8 +1129,8 @@ public class Changsha {
         }
         else
         {
-        	//if (!apdu.unwrap(keyId))
-        	//	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        	if (!apdu.unwrap(DAUK.getKey()))
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         }
         
         if (apdu.ins != (byte)0x18)
@@ -1078,13 +1138,13 @@ public class Changsha {
         	ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
         }
         
-        if(appLockForEver)
+        if(Config.appLockForEver)
         	ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         
         
         
-        if(appLock)
-             appLock = false;
+        if(Config.appLock)
+             Config.appLock = false;
         else 
              ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         
@@ -1104,31 +1164,20 @@ public class Changsha {
     public void personalEnd(MyAPDU apdu) throws ISOException
     {
         if (apdu.cla != (byte)0x00)
+        {
             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        }
             
         if (apdu.ins != (byte)0x08)
         {
             ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
         }
         
-        personalEnd = true;
+        Config.personalEnd = true;
         
         apdu.le = 0;
     }
     
-    public void verify(MyAPDU apdu) throws ISOException
-    {
-    	if (apdu.cla != (byte)0x00)
-    		ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-    	
-    	if (apdu.ins != (byte)0x20)
-    		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
-    	
-    	if (apdu.p1 != (byte)0x00 || apdu.p2 != (byte)0x00)
-    		ISOException.throwIt(ISO7816.SW_WRONG_P1P2);
-    	
-    	//需要实现verifypin0020 0000 03 123456
-    }
     
     public void select(MyAPDU apdu) throws ISOException
     {

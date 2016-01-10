@@ -26,7 +26,7 @@ public class MyAPDU {
     private MyRandom myRandom;
     private byte[] random;
     
-    
+    public final static short SW_E_APPBLK     = (short)0x6A81;
    
     public  MyAPDU(MyRandom rand) 
     {
@@ -62,6 +62,8 @@ public class MyAPDU {
             
             case INS.WRITE_UID:
             case INS.EXTERNAL_AUTH:
+            case INS.VERIFY_PIN:
+            case INS.GET_TRANSACTION_PROVE:
                 return true;
                 
             case INS.GET_CHALLENGE:

@@ -101,6 +101,9 @@ public class Main extends Applet {
 
         // select AID (instance id) return AID FCI;
         
+        if (Config.appLockForEver)
+        	ISOException.throwIt(MyAPDU.SW_E_APPBLK);
+        
         if( apduin.APDUContainData(apduin.ins)) 
         {
            bytesRead = apdu.setIncomingAndReceive();
@@ -120,116 +123,154 @@ public class Main extends Applet {
            apduin.lc = (short)0;
         }
         
-        switch (apduin.ins) {
-            //case INS.CREATE:
-           //     cos.createFile(apduin);
-             //   break;
-                
-                
-            case INS.SELECT:
-            	changsha.select(apduin);
-                break;
-            case INS.READ_BINARY:
-                changsha.readBinary(apduin);
-                break;
-            case INS.WRITE_BINARY:
-            	changsha.writeBinary(apduin);
-                break;
-            case INS.READ_RECORD:
-                changsha.readRecord(apduin);
-                break;
-           
-            case INS.WRITE_KEY:
-                changsha.writeKey(apduin);
-                break;
-            case INS.PERSONAL_END:
-            	changsha.personalEnd(apduin);
-                break;
-                
-                
-            case INS.GET_CHALLENGE:
-                changsha.challenge(apduin);
-                break;
-            case INS.EXTERNAL_AUTH:
-                changsha.externalAuth(apduin);
-                break;      
-                
-                
-            case INS.WRITE_UID:
-                changsha.writeUID(apduin);
-                break;
-            case INS.GET_MESSAGE:
-                changsha.getMessage(apduin);
-                break;
-                
-                
-            case INS.GET_BALANCE:
-                changsha.getBalance(apduin);
-                break;
-            case INS.INIT_PURCHASE_CHARGE:
-            {
-                if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x00)
-                {
-                	changsha.loadInit(apduin);
-                }
-                else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x01 || apduBuffer[ISO7816.OFFSET_P1] == (byte)0x03)
-                {
-                	changsha.purchaseInit(apduin);
-                }
-                else
-                {
-                
-                }
-                    
-                break;
-            }
-            case INS.LOAD:
-                changsha.load(apduin);
-                break;
-            case INS.PURCHASE:
-                changsha.purchase(apduin);
-                break;
-
-            case (byte)0xDC:
-                if (apduin.cla == (byte)0x00 || apduin.cla == (byte)0x04)
-                    changsha.updateRecord(apduin);
-                if (apduin.cla == (byte)0x80)
-                    changsha.cappPurchaseUpdate(apduin);
-                break;
-            
-
-            
-            case INS.APP_BLOCK:
-            	changsha.appBlock(apduin);
-                break;
-            case INS.APP_UNBLOCK:
-            	changsha.appUnBlock(apduin);
-                break;
-            case INS.CARD_BLOCK:
-            	changsha.cardBlock(apduin);
-            	break;
-            case INS.VERIFY:
-            	changsha.verify(apduin);
-            	break;
-                
-           
-                
-            case INS.DES_TEST:
-                ALG.testDES(apduin);
-                break;
-            case INS.MAC_TEST:
-                ALG.testMAC(apduin);
-                break;
-            case INS.TAC_TEST:
-                ALG.testTAC(apduin);
-                break;
-            case (byte)0x03:
-            	changsha.getKey(apduin);
-            	break;
-            default:
-                ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
-	}
-    
+        if (!Config.appLock)
+        {
+	        if (!Config.personalEnd)
+	        {
+	        	//尚未个人化，改成switch
+	        	
+	        	if (apduin.ins == INS.SELECT)
+	        	{
+	        		changsha.select(apduin);
+	        	}
+	        	else if (apduin.ins == INS.WRITE_KEY)
+	        	{
+	        		changsha.writeKey(apduin);
+	        	}
+	        	else if (apduin.ins == INS.WRITE_UID)
+	        	{
+	        		changsha.writeUID(apduin);
+	        	}
+	        	else if (apduin.ins == INS.GET_CHALLENGE)
+	        	{
+	        		changsha.challenge(apduin);
+	        	}
+	        	else if (apduin.ins == INS.EXTERNAL_AUTH)
+	        	{
+	        		changsha.externalAuth(apduin);
+	        	}
+	        	else if (apduin.ins == INS.WRITE_BINARY)
+	        	{
+	        		changsha.writeBinary(apduin);
+	        	}
+	        	else if (apduin.cla == (byte)0x04 && apduin.ins == (byte)0xDC)
+	        	{
+	                changsha.updateRecord(apduin);
+	        	}
+	        	else if (apduin.ins == INS.PERSONAL_END)
+	        	{
+	        		changsha.personalEnd(apduin);
+	        	}
+	        	else if (apduin.ins == INS.APP_BLOCK)
+	        	{
+	        		changsha.appBlock(apduin);
+	        	}
+	        	
+	        	else if (apduin.ins == INS.CARD_BLOCK)
+	        	{
+	        		changsha.cardBlock(apduin);
+	        	}
+	        	else
+	        	{
+	        		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+	        	}
+	        }
+	        else
+	        {
+	        	// 已完成个人化，改成switch
+	        	if (apduin.ins == INS.SELECT)
+	        	{
+	        		changsha.select(apduin);
+	        	}
+	        	else if (apduin.ins == INS.GET_MESSAGE)
+	        	{
+	        		changsha.getMessage(apduin);
+	        	}
+	        	else if (apduin.ins == INS.GET_CHALLENGE)
+	        	{
+	        		changsha.challenge(apduin);
+	        	}
+	        	else if (apduin.ins == INS.EXTERNAL_AUTH)
+	        	{
+	        		changsha.externalAuth(apduin);
+	        	}
+	        	else if (apduin.ins == INS.READ_BINARY)
+	        	{
+	        		changsha.readBinary(apduin);
+	        	}
+	        	else if (apduin.ins == INS.READ_RECORD)
+	        	{
+	        		changsha.readRecord(apduin);
+	        	}
+	        	else if (apduin.ins == INS.GET_BALANCE)
+	        	{
+	        		changsha.getBalance(apduin);
+	        	}
+	        	else if (apduin.ins == INS.VERIFY_PIN)
+	        	{
+	        		changsha.verifyPIN(apduin);
+	        	}
+	        	else if (apduin.ins == INS.INIT_PURCHASE_CHARGE)
+	        	{
+	        		if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x00)
+	                {
+	                	changsha.loadInit(apduin);
+	                }
+	                else if (apduBuffer[ISO7816.OFFSET_P1] == (byte)0x01 || apduBuffer[ISO7816.OFFSET_P1] == (byte)0x03)
+	                {
+	                	changsha.purchaseInit(apduin);
+	                }
+	                else
+	                {
+	                
+	                }
+	        	}
+	        	else if (apduin.ins == INS.LOAD)
+	        	{
+	        		changsha.load(apduin);
+	        	}
+	        	else if (apduin.cla == (byte)0x80 && apduin.ins == (byte)0xDC)
+	        	{
+	                changsha.cappPurchaseUpdate(apduin);
+	        	}
+	        	else if (apduin.ins == INS.PURCHASE)
+	        	{
+	        		changsha.purchase(apduin);
+	        	}
+	        	else if (apduin.ins == INS.GET_TRANSACTION_PROVE)
+	        	{
+	        		changsha.getTransactionProve(apduin);
+	        	}
+	        	else if (apduin.ins == INS.APP_BLOCK)
+	        	{
+	        		changsha.appBlock(apduin);
+	        	}
+	        	
+	        	else if (apduin.ins == INS.CARD_BLOCK)
+	        	{
+	        		changsha.cardBlock(apduin);
+	        	}
+	        	else
+	        	{
+	        		ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+	        	}
+	        }
+        }
+        else
+        {
+        	if (apduin.ins == INS.GET_CHALLENGE)
+        	{
+        		changsha.challenge(apduin);
+        	}
+        	else if (apduin.ins == INS.APP_UNBLOCK)
+        	{
+        		changsha.appUnBlock(apduin);
+        	}
+        	else
+        	{
+        		ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED); 
+        	}
+        }
     
        // if (rc) {
            dl = apduin.le;

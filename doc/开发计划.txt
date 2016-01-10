@@ -1,4 +1,7 @@
-复合消费交易，进站时，闸机除了发送消费初始化指令，还会发送消费指令吗？
+getTransactionProve
+log file
+BCD编码
+pin:reload, change, verify, unblock
 
 
 packageid A00000000386980702

@@ -16,7 +16,7 @@ public class MyRandom {
         ICC.setSeed(random, (short)0, (short)4);
         ICC.generateData(random, (short)0, (short)4);
         
-        if (mode == MODE_DEBUG)
+        if (Config.mode == Config.MODE_DEBUG)
         {
             byte[] test = {0x41, 0x42, 0x43, 0x44};
             
@@ -31,10 +31,8 @@ public class MyRandom {
 		 return random;
 	}
 	
-	 //0debug 
-	//1release
-	    private short mode = (short)0;
-	    private static final short MODE_DEBUG = 0x00;
-	    private static final short MODE_RELEASE = 0X01;
+	
+	
+	    
 
 }

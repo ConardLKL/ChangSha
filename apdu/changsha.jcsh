@@ -20,17 +20,16 @@
 
 
 
-#写安全认证识别码，兼容华大智宝指令
+#华大智宝指令 写安全认证识别码
 #UID = '88D32B76'
 /send 00220000098588D32B7688D32B767f
 
 
+#华大指令 write key 84 D4 p1密钥类型 p2密钥索引 长度 transKey(长度 版本信息 算法标识 错误计数器 后续安全状态 16字节密钥 800000) + mac
 
 #卡片主控密钥
 /send 008400000004
-#传输密钥
-#cardControl
-#84 D4 p1密钥类型 p2密钥索引 长度 transKey(长度 版本信息 算法标识 错误计数器 后续安全状态 16字节密钥 800000) + mac
+#cardControl 31323334353637383132333435363738
 /send 84D439001CD0149E3657632A60ADCFD9E4E2547144B820E5BBF516DFC8CEF6371A
 
 
@@ -72,9 +71,6 @@
 
 #应用主控密钥
 #84 D4 p1密钥类型 p2密钥索引 长度0x14=20 版本信息 算法标识 错误计数器 后续安全状态 密钥16字节 
-#Key Name = CAPP_MANAGE_KEY
-#FuncKey=37C17EFA48C5C513489E5EB6C7AF939A
-
 #Key Name = APP_CONTROL_KEY
 #FuncKey=EBEC8FCAFF6F91ACD3938011A1536854
 /send 008400000004
@@ -99,7 +95,7 @@
 /send 84D436011C5C394D1D6A1FEB5A5E409CD85BD8457D15942AE08A91B54B5CAE6CB8
 
 
-
+#pin密钥，不知道华大pin密钥类型，无法传入
 
 
 #pin重装密钥
@@ -122,6 +118,8 @@
 /send 84D406011C51005EB2E0E78D5F33DD1BEA0BA0C264D5944D7BBF603DA4CB7AEE70
 
 #复合消费交易维护密钥, 和消费密钥相同
+#Key Name = CAPP_MANAGE_KEY
+#FuncKey=37C17EFA48C5C513489E5EB6C7AF939A
 #Key Name = CAPP_MANAGE_KEY
 #FuncKey=37C17EFA48C5C513489E5EB6C7AF939A
 #/send 008400000004
@@ -253,5 +251,5 @@
 
 
 
-#个人化结束，兼容华大智宝指令
+#华大智宝指令  个人化结束
 /send 000800000000
