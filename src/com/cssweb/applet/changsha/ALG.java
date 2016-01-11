@@ -104,6 +104,7 @@ public class ALG {
     {
         byte[] left = new byte[8];
         byte[] right = new byte[8];
+        
         Util.arrayCopy(key, (short)0, left, (short)0, (short)8);
         
         if(key.length == 16)

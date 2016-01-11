@@ -1,7 +1,13 @@
+
+写邮件,提供两张卡fci
+
+
 getTransactionProve
 log file
 BCD编码
 pin:reload, change, verify, unblock
+
+
 
 
 packageid A00000000386980702
@@ -14,6 +20,7 @@ adf A00000000386980701
 
 
 安装的时候选择默认，安装失败的问题
+读卡器无法通过手机读写的问题
 
 
 

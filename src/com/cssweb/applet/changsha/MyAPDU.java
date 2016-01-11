@@ -49,9 +49,8 @@ public class MyAPDU {
         {
             //case INS.CREATE:
         case INS.SELECT:
+        	
         case INS.WRITE_KEY:
-            
-                
             case INS.WRITE_BINARY:
             case (byte)0xDC:
             case INS.APPEND_RECORD:
@@ -64,6 +63,8 @@ public class MyAPDU {
             case INS.EXTERNAL_AUTH:
             case INS.VERIFY_PIN:
             case INS.GET_TRANSACTION_PROVE:
+            case INS.APP_BLOCK:
+            case INS.APP_UNBLOCK:
                 return true;
                 
             case INS.GET_CHALLENGE:
@@ -99,8 +100,17 @@ public class MyAPDU {
     	allBuffer[2] = p1;
     	allBuffer[3] = p2;
     	allBuffer[4] = (byte)lc;
+    	
     	short len = (short) (lc - 4);
-    	Util.arrayCopyNonAtomic(buffer, (short)0, allBuffer, (short)5, len);
+    	
+    	if (len != 0)
+    	{
+    		Util.arrayCopyNonAtomic(buffer, (short)0, allBuffer, (short)5, len);
+    	}
+    	else
+    	{
+    		//只有mac值，不用copy
+    	}
     	
     	
     	
