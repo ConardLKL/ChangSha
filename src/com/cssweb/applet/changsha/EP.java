@@ -11,7 +11,8 @@ package com.cssweb.applet.changsha;
  */
 public class EP extends File{
     
-    private byte[] balance = {0x00, 0x00, 0x00, 0x00};
+    //private byte[] balance = {0x00, 0x00, 0x00, 0x64};
+	private byte[] balance = {0x00, 0x00, (byte)0xC3, (byte)0x50};//500,00
     
     
     public EP(short SFI, short len, byte read, byte write)
